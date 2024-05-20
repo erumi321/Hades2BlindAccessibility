@@ -1,0 +1,8 @@
+Import BlindAccess.lua
+
+To Scripts/Main.lua
+Import register.lua
+Import config.lua
+
+To Game/Projectiles/EnemyProjectiles.sjson
+SJSON Data/EnemyProjectiles.sjson

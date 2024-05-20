@@ -1,1 +1,0 @@
-rom.mods["SGG_Modding-ReturnOfModImporter"].auto()
