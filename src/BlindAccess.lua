@@ -24,12 +24,15 @@ local function setupData()
 		BlindAccesibilityStoreMenu = {
 			Components = {},
 			Name = "BlindAccesibilityStoreMenu"
+		},
+		BlindAccesibilityInventoryMenu = {
+			Components = {},
+			Name = "BlindAccesibilityInventoryMenu"
 		}
 	})
 end
 
 OnControlPressed { "Inventory", function(triggerArgs)
-	print("Blind Access test")
 	if TableLength(MapState.OfferedExitDoors) == 0 and mod.GetMapName() ~= "Hub_Main" then
 		return
 	elseif TableLength(MapState.OfferedExitDoors) == 1 and string.find(mod.GetMapName(), "D_Hub") then
@@ -327,35 +330,94 @@ OnControlPressed { "Codex", function(triggerArgs)
 	if IsScreenOpen("TraitTrayScreen") then
 		local rewardsTable = {}
 		local curMap = mod.GetMapName()
+
+		--shop menu
+		if string.find(curMap, "Shop") or string.find(curMap, "PreBoss") or string.find(curMap, "D_Hub") then
+			if CurrentRun.CurrentRoom.Store == nil then
+				return
+			elseif mod.NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) == 0 then
+				return
+			end
+			thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
+			mod.OpenStoreMenu(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems)
+			return
+		end
+
 		if string.find(curMap, "Hub_PreRun") then
 			rewardsTable = mod.ProcessTable(MapState.WeaponKits)
 		else
 			rewardsTable = mod.ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
+			local currentRoom = CurrentRun.CurrentRoom
+			if currentRoom.HarvestPointIds ~= nil and #currentRoom.HarvestPointIds > 0 then
+				for k, point in pairs(currentRoom.HarvestPointIds) do
+					if IsUseable({Id = point.Id}) then
+						table.insert(rewardsTable, {IsResourceHarvest=true, Type="Herb", Id=point.Id})
+					end
+				end
+			end
+			if currentRoom.ShovelPointId ~= nil and IsUseable({Id = currentRoom.ShovelPointId}) then
+				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Shovel", Id=currentRoom.ShovelPointId})
+			end
+			if currentRoom.PickaxePointId ~= nil and IsUseable({Id = currentRoom.PickaxePointId}) then
+				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Pickaxe", Id=currentRoom.PickaxePointId})
+			end
+			if currentRoom.ExorcismPointId ~= nil and IsUseable({Id = currentRoom.ExorcismPointId}) then
+				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Tablet", Id=currentRoom.ExorcismPointId})
+			end 
+			if currentRoom.FishingPointId ~= nil and IsUseable({Id = currentRoom.FishingPointId}) then
+				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Fish", Id=currentRoom.FishingPointId})
+			end 
 		end
+
+		local tempTable = {}
+		for k,v in pairs(rewardsTable) do
+			if v.ObjectId == nil or IsUseable({ Id = v.ObjectId }) then
+				tempTable[k] = v
+			end
+		end
+
+		rewardsTable = tempTable
+
 		if TableLength(rewardsTable) > 0 then
 			thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
 			mod.OpenRewardMenu(rewardsTable)
 		else
 			return
 		end
-	elseif IsScreenOpen("BlindAccessibilityRewardMenu") then
-		local curMap = mod.GetMapName()
-		if not string.find(curMap, "Shop") and not string.find(curMap, "PreBoss") and not string.find(curMap, "D_Hub") then
-			return
-		end
-		if CurrentRun.CurrentRoom.Store == nil then
-			return
-		elseif mod.NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) == 0 then
-			return
-		end
-		thread(mod.CloseRewardMenu, ActiveScreens.BlindAccessibilityRewardMenu)
-		mod.OpenStoreMenu(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems)
+	-- elseif IsScreenOpen("BlindAccessibilityRewardMenu") then
+	-- 	local curMap = mod.GetMapName()
+	-- 	if not string.find(curMap, "Shop") and not string.find(curMap, "PreBoss") and not string.find(curMap, "D_Hub") then
+	-- 		return
+	-- 	end
+	-- 	if CurrentRun.CurrentRoom.Store == nil then
+	-- 		return
+	-- 	elseif mod.NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) == 0 then
+	-- 		return
+	-- 	end
+	-- 	thread(mod.CloseRewardMenu, ActiveScreens.BlindAccessibilityRewardMenu)
+	-- 	mod.OpenStoreMenu(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems)
 	end
 end }
 
 OnControlPressed { "AdvancedTooltip", function(triggerArgs)
 	local rewardsTable = {}
-	if CurrentRun.Hero.IsDead then
+	if IsScreenOpen("InventoryScreen") then
+		local currentResources = {}
+		local screen = ActiveScreens.InventoryScreen
+		for k,resourceName in pairs(screen.ItemCategories[screen.ActiveCategoryIndex]) do
+			local amount = GameState.Resources[resourceName]
+			if amount ~= nil and GetDisplayName({Text = resourceName}) ~= nil then
+				table.insert(currentResources, {Resource = resourceName, Name = GetDisplayName({Text = resourceName}), Amount = amount})
+			end
+		end
+
+		table.sort(currentResources, function(a,b) return a.Name < b.Name end)
+
+		-- CloseInventoryScreen(ActiveScreens.InventoryScreen, nil)
+
+		mod.OpenSimplifiedInventory(currentResources)
+		
+	elseif CurrentRun.Hero.IsDead then
 		rewardsTable = mod.ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
 		if TableLength(rewardsTable) > 0 then
 			if not IsEmpty(ActiveScreens.TraitTrayScreen) then
@@ -365,6 +427,98 @@ OnControlPressed { "AdvancedTooltip", function(triggerArgs)
 		end
 	end
 end }
+
+function mod.OpenSimplifiedInventory(resources) 
+	local screen = DeepCopyTable(ScreenData.BlindAccesibilityInventoryMenu)
+
+	if IsScreenOpen(screen.Name) then
+		return
+	end
+	OnScreenOpened(screen)
+	HideCombatUI(screen.Name)
+
+	PlaySound({ Name = "/SFX/Menu Sounds/ContractorMenuOpen" })
+	local components = screen.Components
+
+	components.ShopBackgroundDim = CreateScreenComponent({ Name = "rectangle01", Group = "Menu_UI" })
+	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Menu_UI_Backing", Scale = 0.7 })
+	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
+	components.CloseButton.OnPressedFunctionName = "BlindAccess.CloseInventoryMenu"
+	components.CloseButton.ControlHotkey = "Cancel"
+
+	SetScale({ Id = components.ShopBackgroundDim.Id, Fraction = 4 })
+	SetColor({ Id = components.ShopBackgroundDim.Id, Color = { 0, 0, 0, 1 } })
+
+	mod.CreateInventoryButtons(screen, resources)
+	screen.KeepOpen = true
+	-- thread(HandleWASDInput, screen)
+	HandleScreenInput(screen)
+	-- SetConfigOption({ Name = "ExclusiveInteractGroup", Value = "Menu_UI" })
+end
+
+function mod.CreateInventoryButtons(screen, resources)
+	local startX = 360
+	local startY = 135
+	local endY = 635
+	local xIncrement = 300
+	local yIncrement = 55
+
+	local curY = startY
+	local curX = startX
+
+	local components = screen.Components
+	local isFirstButton = true
+
+	for resource, resourceData in pairs(resources) do
+		local buttonKey = "InventoryMenuText" .. resourceData.Resource
+		components[buttonKey] =
+			CreateScreenComponent({
+				Name = "BlankObstacle",
+				Group = "Menu_UI_Inventory",
+				Scale = 0.8,
+				X = curX,
+				Y = curY
+			})
+		CreateTextBox({
+			Id = components[buttonKey].Id,
+			Text = resourceData.Name .. " : " .. resourceData.Amount,
+			FontSize = 24,
+			OffsetX = -320,
+			OffsetY = 0,
+			Color = Color.White,
+			Font = "P22UndergroundSCMedium",
+			Group = "Menu_UI_Inventory",
+			ShadowBlur = 0,
+			ShadowColor = { 0, 0, 0, 1 },
+			ShadowOffset = { 0, 2 },
+			Justification = "Left",
+		})
+		if isFirstButton then
+			TeleportCursor({ OffsetX = curX, OffsetY = curY })
+			isFirstButton = false
+		end
+		curY = curY + yIncrement
+		if curY >= endY then
+			curY = startY
+			curX = curX + xIncrement 
+		end
+	end
+end
+
+function mod.CloseInventoryMenu(screen, button)
+	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = nil })
+	OnScreenCloseStarted(screen)
+	CloseScreen(GetAllIds(screen.Components), 0.15)
+	OnScreenCloseFinished(screen)
+	notifyExistingWaiters(screen.Name)
+	ShowCombatUI(screen.Name)
+end
+
+
+--DEBUG STUFF
+ScreenData.InventoryScreen.FreezePlayerArgs = {
+	DisableTray = false
+}
 
 local nameToPreviewName = {
 	["RoomRewardMetaPoint"] = "Darkness",
@@ -1065,43 +1219,83 @@ function mod.CreateRewardButtons(screen, rewards)
 		curY = curY + yIncrement
 	end
 	for k, reward in pairs(rewards) do
-		local displayText = reward.Name
-		local buttonKey = "RewardMenuButton" .. k .. displayText
-		components[buttonKey] =
-			CreateScreenComponent({
-				Name = "ButtonDefault",
+		if reward.IsResourceHarvest then
+			local displayText = reward.Type
+			local buttonKey = "RewardMenuButton" .. k .. displayText
+			components[buttonKey] =
+				CreateScreenComponent({
+					Name = "ButtonDefault",
+					Group = "Menu_UI_Rewards",
+					Scale = 0.8,
+					X = xPos,
+					Y = curY
+				})
+			components[buttonKey].index = k
+			components[buttonKey].reward = {ObjectId = reward.Id}
+			components[buttonKey].OnPressedFunctionName = "BlindAccess.GoToReward"
+			if reward.Args ~= nil and reward.Args.ForceLootName then
+				displayText = reward.Args.ForceLootName:gsub("Upgrade", ""):gsub("Drop", "")
+			end
+			displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
+			displayText = (displayText .. mod.GetWeaponDisplayConditions(reward.Name)) or displayText
+			CreateTextBox({
+				Id = components[buttonKey].Id,
+				Text = displayText,
+				FontSize = 24,
+				OffsetX = -320,
+				OffsetY = 0,
+				Color = Color.White,
+				Font = "P22UndergroundSCMedium",
 				Group = "Menu_UI_Rewards",
-				Scale = 0.8,
-				X = xPos,
-				Y = curY
+				ShadowBlur = 0,
+				ShadowColor = { 0, 0, 0, 1 },
+				ShadowOffset = { 0, 2 },
+				Justification = "Left",
 			})
-		components[buttonKey].index = k
-		components[buttonKey].reward = reward
-		components[buttonKey].OnPressedFunctionName = "BlindAccess.GoToReward"
-		if reward.Args ~= nil and reward.Args.ForceLootName then
-			displayText = reward.Args.ForceLootName:gsub("Upgrade", ""):gsub("Drop", "")
+			if isFirstButton then
+				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
+				isFirstButton = false
+			end
+			curY = curY + yIncrement
+		else
+			local displayText = reward.Name
+			local buttonKey = "RewardMenuButton" .. k .. displayText
+			components[buttonKey] =
+				CreateScreenComponent({
+					Name = "ButtonDefault",
+					Group = "Menu_UI_Rewards",
+					Scale = 0.8,
+					X = xPos,
+					Y = curY
+				})
+			components[buttonKey].index = k
+			components[buttonKey].reward = reward
+			components[buttonKey].OnPressedFunctionName = "BlindAccess.GoToReward"
+			if reward.Args ~= nil and reward.Args.ForceLootName then
+				displayText = reward.Args.ForceLootName:gsub("Upgrade", ""):gsub("Drop", "")
+			end
+			displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
+			displayText = (displayText .. mod.GetWeaponDisplayConditions(reward.Name)) or displayText
+			CreateTextBox({
+				Id = components[buttonKey].Id,
+				Text = displayText,
+				FontSize = 24,
+				OffsetX = -320,
+				OffsetY = 0,
+				Color = Color.White,
+				Font = "P22UndergroundSCMedium",
+				Group = "Menu_UI_Rewards",
+				ShadowBlur = 0,
+				ShadowColor = { 0, 0, 0, 1 },
+				ShadowOffset = { 0, 2 },
+				Justification = "Left",
+			})
+			if isFirstButton then
+				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
+				isFirstButton = false
+			end
+			curY = curY + yIncrement
 		end
-		displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
-		displayText = (displayText .. mod.GetWeaponDisplayConditions(reward.Name)) or displayText
-		CreateTextBox({
-			Id = components[buttonKey].Id,
-			Text = displayText,
-			FontSize = 24,
-			OffsetX = -320,
-			OffsetY = 0,
-			Color = Color.White,
-			Font = "P22UndergroundSCMedium",
-			Group = "Menu_UI_Rewards",
-			ShadowBlur = 0,
-			ShadowColor = { 0, 0, 0, 1 },
-			ShadowOffset = { 0, 2 },
-			Justification = "Left",
-		})
-		if isFirstButton then
-			TeleportCursor({ OffsetX = xPos, OffsetY = curY })
-			isFirstButton = false
-		end
-		curY = curY + yIncrement
 	end
 end
 
@@ -1185,7 +1379,7 @@ function mod.OpenStoreMenu(items)
 	mod.CreateItemButtons(screen, items)
 	screen.KeepOpen = true
 	HandleScreenInput(screen)
-	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = "Asses_UI_Store" })
+	-- SetConfigOption({ Name = "ExclusiveInteractGroup", Value = "Asses_UI_Store" })
 end
 
 local nameToPreviewName = {
@@ -1240,7 +1434,7 @@ function mod.CreateItemButtons(screen, items)
 	curY = curY + yIncrement
 	CreateTextBox({
 		Id = components.statsTextBacking.Id,
-		Text = "Obols: " .. ((CurrentRun or { Money = 0 }).Money or 0),
+		Text = "Gold: " .. (GameState.Resources["Money"] or 0),
 		FontSize = 24,
 		Width = 360,
 		OffsetX = 0,
@@ -1269,10 +1463,17 @@ function mod.CreateItemButtons(screen, items)
 			components[buttonKey].index = k
 			components[buttonKey].item = item
 			components[buttonKey].OnPressedFunctionName = "BlindAccess.MoveToItem"
-			displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
+
+			if displayText == "RandomLoot" then
+				if LootObjects[item.ObjectId] ~= nil then
+					displayText = LootObjects[item.ObjectId].Name
+				end
+			end
+			displayText = displayText:gsub("RoomReward", ""):gsub("StoreReward", "") or displayText
 			CreateTextBox({
 				Id = components[buttonKey].Id,
-				Text = displayText,
+				Text = GetDisplayName({Text=displayText}),
+				UseDescription = false,
 				FontSize = 24,
 				OffsetX = -520,
 				OffsetY = 0,
