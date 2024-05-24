@@ -1,8 +1,0 @@
-Projectiles = [
-    "_search", [
-        { Name = "ChronosCircle" }
-        { Damage = 50 }
-        { Name = "ChronosCircleInverted" }
-        { Damage = 50 }
-    ]
-]

@@ -1,6 +1,4 @@
-local mod = ... or BlindAccess
-local config = {
-	Enabled = true,
+return {
+  version = 0.1;
+  enabled = true;
 }
-mod.Config = config
-return config

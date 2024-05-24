@@ -1,54 +1,30 @@
-local _ENV = rom and rom.game or _ENV
-local mod = ... or BlindAccess
-if not mod.Config.Enabled then return end
+---@meta _
+-- globals we define are private to our plugin!
+---@diagnostic disable: lowercase-global
 
---[[
-Mod: DoorMenu
-Author: hllf & JLove
-Version: 29
+-- this file will be reloaded if it changes during gameplay,
+-- 	so only assign to values or define things here.
 
-Intended as an accessibility mod. Places all doors in a menu, allowing the player to select a door and be teleported to it.
-Use the mod importer to import this mod.
---]]
-
-local function setupData()
-	ModUtil.Table.Merge(ScreenData, {
-		BlindAccessibilityRewardMenu = {
-			Components = {},
-			Name = "BlindAccessibilityRewardMenu"
-		},
-		BlindAccesibilityDoorMenu = {
-			Components = {},
-			Name = "BlindAccesibilityDoorMenu"
-		},
-		BlindAccesibilityStoreMenu = {
-			Components = {},
-			Name = "BlindAccesibilityStoreMenu"
-		},
-		BlindAccesibilityInventoryMenu = {
-			Components = {},
-			Name = "BlindAccesibilityInventoryMenu"
-		}
-	})
-end
-
-OnControlPressed { "Inventory", function(triggerArgs)
-	if TableLength(MapState.OfferedExitDoors) == 0 and mod.GetMapName() ~= "Hub_Main" then
+function OnInventoryPress()
+	if not IsScreenOpen("TraitTrayScreen") then
 		return
-	elseif TableLength(MapState.OfferedExitDoors) == 1 and string.find(mod.GetMapName(), "D_Hub") then
+	end
+	if TableLength(MapState.OfferedExitDoors) == 0 and GetMapName() ~= "Hub_Main" then
+		return
+	elseif TableLength(MapState.OfferedExitDoors) == 1 and string.find(GetMapName(), "D_Hub") then
 		finalBossDoor = CollapseTable(MapState.OfferedExitDoors)[1]
 		if finalBossDoor.Room.Name:find("D_Boss", 1, true) == 1 and GetDistance({ Id = 547487, DestinationId = 551569 }) ~= 0 then
 			return
 		end
 	end
 	if CurrentRun.CurrentRoom.ExitsUnlocked and IsScreenOpen("TraitTrayScreen") then
-		thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
+		TraitTrayScreenClose(ActiveScreens.TraitTrayScreen)
 		OpenAssesDoorShowerMenu(CollapseTable(MapState.OfferedExitDoors))
 	end
-end }
+end
 
 function OpenAssesDoorShowerMenu(doors)
-	local curMap = mod.GetMapName()
+	local curMap = GetMapName()
 	local screen = DeepCopyTable(ScreenData.BlindAccesibilityDoorMenu)
 
 	if IsScreenOpen(screen.Name) then
@@ -73,42 +49,22 @@ function OpenAssesDoorShowerMenu(doors)
 
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Asses_UI_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
-	components.CloseButton.OnPressedFunctionName = "BlindAccess.CloseAssesDoorShowerScreen"
-	components.CloseButton.ControlHotkey = "Cancel"
+	components.CloseButton.OnPressedFunctionName = "CloseAssesDoorShowerScreen"
+	components.CloseButton.ControlHotkeys = { "Cancel", }
+	components.CloseButton.MouseControlHotkeys  = { "Cancel" }
 
 	SetScale({ Id = components.ShopBackgroundDim.Id, Fraction = 4 })
 	SetColor({ Id = components.ShopBackgroundDim.Id, Color = { 0, 0, 0, 1 } })
 
 
-	mod.CreateAssesDoorButtons(screen, doors)
+	CreateAssesDoorButtons(screen, doors)
 	screen.KeepOpen = true
 	-- thread( HandleWASDInput, screen )
 	HandleScreenInput(screen)
 	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = "Asses_UI" })
 end
 
-local nameToPreviewName = {
-	["HermesUpgrade"] = "Hermes",
-	["HermesUpgrade (Infernal Gate)"] = "Hermes (Infernal Gate)",
-	["RoomRewardMetaPoint"] = "Darkness",
-	["Gem"] = "Gemstones",
-	["LockKey"] = "Chthonic Key",
-	["Gift"] = "Nectar",
-	["RoomRewardMaxHealth"] = "Centaur Heart",
-	["RoomRewardMaxHealth (Infernal Gate)"] = "Centaur Heart (Infernal Gate)",
-	["StackUpgrade"] = "Pom of Power",
-	["StackUpgrade (Infernal Gate)"] = "pom of Power (Infernal Gate)",
-	["WeaponUpgrade"] = "Daedalus Hammer",
-	["RoomRewardMoney"] = "Gold",
-	["RoomRewardMoney (Infernal Gate)"] = "Gold (Infernal Gate)",
-	["SuperLockKey"] = "Titan Blood",
-	["Shop"] = "Charon's Shop",
-	["SuperGem"] = "Diamond",
-	["SuperGift"] = "Ambrosia",
-	["Story"] = "NPC Room",
-}
-
-function mod.GetMapName()
+function GetMapName()
 	if CurrentRun.Hero.IsDead then
 		return CurrentHubRoom.Name
 	else
@@ -116,7 +72,7 @@ function mod.GetMapName()
 	end
 end
 
-function mod.CreateAssesDoorButtons(screen, doors)
+function CreateAssesDoorButtons(screen, doors)
 	local xPos = 960
 	local startY = 180
 	local yIncrement = 75
@@ -177,7 +133,7 @@ function mod.CreateAssesDoorButtons(screen, doors)
 	curY = curY + yIncrement
 	for k, door in pairs(doors) do
 		local showDoor = true
-		if string.find(mod.GetMapName(), "D_Hub") then
+		if string.find(GetMapName(), "D_Hub") then
 			if door.Room.Name:find("D_Boss", 1, true) == 1 and GetDistance({ Id = 547487, DestinationId = 551569 }) ~= 0 then
 				showDoor = false
 			end
@@ -185,10 +141,10 @@ function mod.CreateAssesDoorButtons(screen, doors)
 		if showDoor then
 			local displayText = ""
 			if door.Room.ChosenRewardType == "Devotion" then
-				displayText = displayText .. mod.getDoorSound(door, false) .. " "
-				displayText = displayText .. mod.getDoorSound(door, true)
+				displayText = displayText .. getDoorSound(door, false) .. " "
+				displayText = displayText .. getDoorSound(door, true)
 			else
-				displayText = displayText .. mod.getDoorSound(door, false)
+				displayText = displayText .. getDoorSound(door, false)
 			end
 			displayText = displayText:gsub("Room", "")
 
@@ -220,7 +176,10 @@ function mod.CreateAssesDoorButtons(screen, doors)
 					X = xPos,
 					Y = curY
 				})
-			components[buttonKey].OnPressedFunctionName = "BlindAccess.AssesDoorMenuSoundSet"
+				SetScaleX({Id = components[buttonKey].Id, Fraction=2})
+			components[buttonKey].OnPressedFunctionName = "AssesDoorMenuSoundSet"
+			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
 			components[buttonKey].door = door
 			--Attach({ Id = components[buttonKey].Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = xPos, OffsetY = curY })
 
@@ -247,7 +206,7 @@ function mod.CreateAssesDoorButtons(screen, doors)
 	end
 end
 
-function mod.CloseAssesDoorShowerScreen(screen, button)
+function CloseAssesDoorShowerScreen(screen, button)
 	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = nil })
 	OnScreenCloseStarted(screen)
 	CloseScreen(GetAllIds(screen.Components), 0.15)
@@ -256,17 +215,17 @@ function mod.CloseAssesDoorShowerScreen(screen, button)
 	ShowCombatUI(screen.Name)
 end
 
-function mod.AssesDoorMenuSoundSet(screen, button)
+function AssesDoorMenuSoundSet(screen, button)
 	PlaySound({ Name = "/SFX/Menu Sounds/ContractorItemPurchase" })
-	mod.CloseAssesDoorShowerScreen(screen, button)
-	mod.doDefaultSound(button.door)
+	CloseAssesDoorShowerScreen(screen, button)
+	doDefaultSound(button.door)
 end
 
-function mod.doDefaultSound(door)
+function doDefaultSound(door)
 	Teleport({ Id = CurrentRun.Hero.ObjectId, DestinationId = door.ObjectId })
 end
 
-function mod.getDoorSound(door, devotionSlot)
+function getDoorSound(door, devotionSlot)
 	local room = door.Room
 	if door.Room.Name == "FinalBossExitDoor" or door.Room.Name == "E_Intro" then
 		return "Greece"
@@ -304,131 +263,26 @@ function mod.getDoorSound(door, devotionSlot)
 	end
 end
 
-ModUtil.Path.Wrap("ExitDoorUnlockedPresentation", function(baseFunc, exitDoor)
-	local ret = baseFunc(exitDoor)
-	if TableLength(MapState.OfferedExitDoors) == 1 then
-		if GetDistance({ Id = 547487, DestinationId = 551569 }) == 0 then
-			return ret
-		elseif GetDistance({ Id = 547487, DestinationId = 551569 }) ~= 0 and GetDistance({ Id = CurrentRun.Hero.ObjectId, DestinationId = 547487 }) < 1000 then
-			return ret
-		end
-	end
-	local rewardsTable = mod.ProcessTable(LootObjects)
-	if TableLength(rewardsTable) > 0 then
-		PlaySound({ Name = "/Leftovers/SFX/AnnouncementPing" })
-		return ret
-	end
-	local curMap = mod.GetMapName()
-	if curMap == nil or string.find(curMap, "PostBoss") or string.find(curMap, "Hub_Main") or string.find(curMap, "Shop") or string.find(curMap, "D_Hub") or (string.find(curMap, "PreBoss") and CurrentRun.CurrentRoom.Store ~= nil and CurrentRun.CurrentRoom.Store.SpawnedStoreItems ~= nil) then
-		return ret
-	end
-	OpenAssesDoorShowerMenu(CollapseTable(MapState.OfferedExitDoors))
-	return ret
-end)
-
-OnControlPressed { "Codex", function(triggerArgs)
-	if IsScreenOpen("TraitTrayScreen") then
-		local rewardsTable = {}
-		local curMap = mod.GetMapName()
-
-		--shop menu
-		if string.find(curMap, "Shop") or string.find(curMap, "PreBoss") or string.find(curMap, "D_Hub") then
-			if CurrentRun.CurrentRoom.Store == nil then
-				return
-			elseif mod.NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) == 0 then
-				return
-			end
-			thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
-			mod.OpenStoreMenu(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems)
-			return
-		end
-
-		if string.find(curMap, "Hub_PreRun") then
-			rewardsTable = mod.ProcessTable(MapState.WeaponKits)
-		else
-			rewardsTable = mod.ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
-			local currentRoom = CurrentRun.CurrentRoom
-			if currentRoom.HarvestPointIds ~= nil and #currentRoom.HarvestPointIds > 0 then
-				for k, point in pairs(currentRoom.HarvestPointIds) do
-					if IsUseable({Id = point.Id}) then
-						table.insert(rewardsTable, {IsResourceHarvest=true, Type="Herb", Id=point.Id})
-					end
-				end
-			end
-			if currentRoom.ShovelPointId ~= nil and IsUseable({Id = currentRoom.ShovelPointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Shovel", Id=currentRoom.ShovelPointId})
-			end
-			if currentRoom.PickaxePointId ~= nil and IsUseable({Id = currentRoom.PickaxePointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Pickaxe", Id=currentRoom.PickaxePointId})
-			end
-			if currentRoom.ExorcismPointId ~= nil and IsUseable({Id = currentRoom.ExorcismPointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Tablet", Id=currentRoom.ExorcismPointId})
-			end 
-			if currentRoom.FishingPointId ~= nil and IsUseable({Id = currentRoom.FishingPointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Fish", Id=currentRoom.FishingPointId})
-			end 
-		end
-
-		local tempTable = {}
-		for k,v in pairs(rewardsTable) do
-			if v.ObjectId == nil or IsUseable({ Id = v.ObjectId }) then
-				tempTable[k] = v
-			end
-		end
-
-		rewardsTable = tempTable
-
-		if TableLength(rewardsTable) > 0 then
-			thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
-			mod.OpenRewardMenu(rewardsTable)
-		else
-			return
-		end
-	-- elseif IsScreenOpen("BlindAccessibilityRewardMenu") then
-	-- 	local curMap = mod.GetMapName()
-	-- 	if not string.find(curMap, "Shop") and not string.find(curMap, "PreBoss") and not string.find(curMap, "D_Hub") then
-	-- 		return
-	-- 	end
-	-- 	if CurrentRun.CurrentRoom.Store == nil then
-	-- 		return
-	-- 	elseif mod.NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) == 0 then
-	-- 		return
-	-- 	end
-	-- 	thread(mod.CloseRewardMenu, ActiveScreens.BlindAccessibilityRewardMenu)
-	-- 	mod.OpenStoreMenu(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems)
-	end
-end }
-
-OnControlPressed { "AdvancedTooltip", function(triggerArgs)
-	local rewardsTable = {}
-	if IsScreenOpen("InventoryScreen") then
+function TryOpenSimplifiedInventory(screen, button) 
+	if not IsScreenOpen("BlindAccesibilityInventoryMenu") then
 		local currentResources = {}
-		local screen = ActiveScreens.InventoryScreen
 		for k,resourceName in pairs(screen.ItemCategories[screen.ActiveCategoryIndex]) do
 			local amount = GameState.Resources[resourceName]
-			if amount ~= nil and GetDisplayName({Text = resourceName}) ~= nil then
-				table.insert(currentResources, {Resource = resourceName, Name = GetDisplayName({Text = resourceName}), Amount = amount})
+			if amount ~= nil and GetDisplayName({Text = resourceName, IgnoreSpecialFormatting=true}) ~= resourceName then
+				table.insert(currentResources, {Resource = resourceName, Name = GetDisplayName({Text = resourceName, IgnoreSpecialFormatting=true}), Amount = amount})
 			end
 		end
 
 		table.sort(currentResources, function(a,b) return a.Name < b.Name end)
 
-		-- CloseInventoryScreen(ActiveScreens.InventoryScreen, nil)
+	 	thread(CloseInventoryScreen, screen, button)
+		-- thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
 
-		mod.OpenSimplifiedInventory(currentResources)
-		
-	elseif CurrentRun.Hero.IsDead then
-		rewardsTable = mod.ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
-		if TableLength(rewardsTable) > 0 then
-			if not IsEmpty(ActiveScreens.TraitTrayScreen) then
-				thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
-			end
-			mod.OpenRewardMenu(rewardsTable)
-		end
+		OpenSimplifiedInventory(currentResources)
 	end
-end }
+end
 
-function mod.OpenSimplifiedInventory(resources) 
+function OpenSimplifiedInventory(resources) 
 	local screen = DeepCopyTable(ScreenData.BlindAccesibilityInventoryMenu)
 
 	if IsScreenOpen(screen.Name) then
@@ -443,20 +297,23 @@ function mod.OpenSimplifiedInventory(resources)
 	components.ShopBackgroundDim = CreateScreenComponent({ Name = "rectangle01", Group = "Menu_UI" })
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Menu_UI_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
-	components.CloseButton.OnPressedFunctionName = "BlindAccess.CloseInventoryMenu"
-	components.CloseButton.ControlHotkey = "Cancel"
+	components.CloseButton.OnPressedFunctionName = "CloseInventoryMenu"
+	components.CloseButton.ControlHotkeys = { "Cancel", }
+	components.CloseButton.MouseControlHotkeys  = { "Cancel", "Inventory", }
 
 	SetScale({ Id = components.ShopBackgroundDim.Id, Fraction = 4 })
 	SetColor({ Id = components.ShopBackgroundDim.Id, Color = { 0, 0, 0, 1 } })
 
-	mod.CreateInventoryButtons(screen, resources)
+	CreateInventoryButtons(screen, resources)
 	screen.KeepOpen = true
 	-- thread(HandleWASDInput, screen)
 	HandleScreenInput(screen)
 	-- SetConfigOption({ Name = "ExclusiveInteractGroup", Value = "Menu_UI" })
+
+	return screen
 end
 
-function mod.CreateInventoryButtons(screen, resources)
+function CreateInventoryButtons(screen, resources)
 	local startX = 360
 	local startY = 135
 	local endY = 635
@@ -473,17 +330,19 @@ function mod.CreateInventoryButtons(screen, resources)
 		local buttonKey = "InventoryMenuText" .. resourceData.Resource
 		components[buttonKey] =
 			CreateScreenComponent({
-				Name = "BlankObstacle",
+				Name = "ButtonDefault",
 				Group = "Menu_UI_Inventory",
 				Scale = 0.8,
 				X = curX,
 				Y = curY
 			})
+		AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+		-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
 		CreateTextBox({
 			Id = components[buttonKey].Id,
 			Text = resourceData.Name .. " : " .. resourceData.Amount,
 			FontSize = 24,
-			OffsetX = -320,
+			OffsetX = -100,
 			OffsetY = 0,
 			Color = Color.White,
 			Font = "P22UndergroundSCMedium",
@@ -505,7 +364,7 @@ function mod.CreateInventoryButtons(screen, resources)
 	end
 end
 
-function mod.CloseInventoryMenu(screen, button)
+function CloseInventoryMenu(screen, button)
 	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = nil })
 	OnScreenCloseStarted(screen)
 	CloseScreen(GetAllIds(screen.Components), 0.15)
@@ -514,80 +373,108 @@ function mod.CloseInventoryMenu(screen, button)
 	ShowCombatUI(screen.Name)
 end
 
+local mapPointsOfInterest = {
+	Hub_Main = {
+		AddNPCs = true,
+		SetupFunction = function(t)
+			local copy = ShallowCopyTable(t)
+			local name = ""
+			local objectId = nil
+			for k,plot in pairs(GameState.GardenPlots) do
+				if plot.GrowTimeRemaining == 0 then
+					objectId = plot.ObjectId
+					if plot.StoredGrows > 0 then
+						name = GetDisplayName({Text = "GardenPlots", IgnoreSpecialFormatting=true}) .. " - Harvestable"
+						break
+					else
+						name = GetDisplayName({Text = "GardenPlots", IgnoreSpecialFormatting=true}) .. " - Plantable"
+					end
+				end
+			end
+			if name ~= "" then
+				table.insert(copy, {Name = name, ObjectId = objectId, DestinationOffsetX=100})
+			end
+			return copy
+		end,
+		Objects = {
+			{Name = "QuestLog_Unlocked_Subtitle", ObjectId=589991},
+			{Name = "GhostAdminScreen_Title", ObjectId=567390, DestinationOffsetY = 137, RequireUseable=false},
+			{Name = "Broker", ObjectId=558096, DestinationOffsetX = 140, DestinationOffsetY = 35},
+			{Name = "Supply Drop", ObjectId=583652, DestinationOffsetX=117, DestinationOffsetY=-64}, --No direct translation in sjson
+			{Name = "Training Ground", ObjectId=587947, RequireUseable=false} --No direct translation in sjson 
+			--we're cheating a little here as this is the telport to the stair object in the loading zone, as every once in a while the actual loading zone has not been found
+		}
+	},
+	Hub_PreRun = {
+		AddNPCs = true,
+		SetupFunction = function(t)
+			local copy = ShallowCopyTable(t)
+			for index, weaponName in ipairs( WeaponSets.HeroPrimaryWeapons ) do
+				local suffix = ""
+				if IsBonusUnusedWeapon( weaponName ) then
+					suffix = " - " .. GetDisplayName({Text = "UnusedWeaponBonusTrait", IgnoreSpecialFormatting=true})
+				end
+				if IsUseable({Id = MapState.WeaponKitIds[index]}) then
+					table.insert(copy, {Name = GetDisplayName({Text="WeaponSet"}) .. " " .. GetDisplayName({Text=weaponName}) .. suffix, ObjectId =MapState.WeaponKitIds[index] })
+				end
+			end
 
---DEBUG STUFF
-ScreenData.InventoryScreen.FreezePlayerArgs = {
-	DisableTray = false
+			for index, toolName in ipairs( ToolOrderData ) do
+				local kitId = MapState.ToolKitIds[index]
+				if IsUseable({Id = kitId}) then
+					table.insert(copy, {Name = GetDisplayName({Text = "Tool", IgnoreSpecialFormatting=true}) .. " " .. GetDisplayName({Text=toolName, IgnoreSpecialFormatting=true}), ObjectId = kitId })
+				end
+			end
+			return copy
+		end,
+		Objects = {
+			{Name = "TraitTray_Category_MetaUpgrades", ObjectId=587228, RequireUseable=false},
+			{Name = "WeaponShop", ObjectId=558210, RequireUseable=false},
+			{Name = "BountyBoard", ObjectId=561146, DestinationOffsetX=-17, DestinationOffsetY=82},
+			{Name = "Keepsakes", ObjectId=421320, DestinationOffsetX=119, DestinationOffsetY=30},
+			{Name = "BiomeF", ObjectId=587938, DestinationOffsetX=263, DestinationOffsetY=-293, RequireUseable=false},
+			{Name = "RunHistoryScreen_RouteN", ObjectId=587935, DestinationOffsetX=-162, DestinationOffsetY=194, RequireUseable=false},
+			{Name = "ShrineMenu", ObjectId=589694, DestinationOffsetY=90},
+			{Name = "Hub", ObjectId=588689, RequireUseable=false},
+		}
+	}
 }
 
-local nameToPreviewName = {
-	["RoomRewardMetaPoint"] = "Darkness",
-	["RoomRewardMetaPointRunProgress"] = "Darkness (Pitch-Black)",
-	["MetaPoints"] = "Darkness",
-	["Gem"] = "Gemstones",
-	["GemRunProgress"] = "Gemstones (Brilliant)",
-	["Gems"] = "Gemstones",
-	["LockKey"] = "Chthonic Key",
-	["LockKeyRunProgress"] = "Chthonic Key (Fated)",
-	["Gift"] = "Nectar",
-	["GiftRunProgress"] = "Nectar (Vintage)",
-	["RoomRewardMaxHealth"] = "Centaur Heart",
-	["StackUpgrade"] = "Pom of Power",
-	["WeaponUpgrade"] = "Daedalus Hammer",
-	["RoomRewardMoney"] = "Gold",
-	["Money"] = "Gold",
-	["SuperLockKey"] = "Titan Blood",
-	["SuperGem"] = "Diamond",
-	["SuperGift"] = "Ambrosia",
-	["HermesUpgrade"] = "Hermes",
-	["AthenaUpgrade"] = "Athena",
-	["CerberusKey"] = "Satyr Sack",
-	["HealthFountain"] = "Fountain",
-	["HealthFountainAsphodel"] = "Fountain",
-	["HealthFountainElysium"] = "Fountain",
-	["HealthFountainStyx"] = "Fountain",
-	["SwordWeapon"] = "Stygian Blade",
-	["BowWeapon"] = "Heart-Seeking Bow",
-	["SpearWeapon"] = "Eternal Spear",
-	["GunWeapon"] = "Adamant Rail",
-	["FistWeapon"] = "Twin Fists",
-	["ShieldWeapon"] = "Shield of Chaos",
-	["NPC_Cerberus_Field_01"] = "Cerberus",
-}
+function ProcessTable(objects)
+	local t = InitializeObjectList(objects)
 
-function mod.ProcessTable(objects)
-	local table = mod.InitializeObjectList(objects)
-	if CurrentRun and CurrentRun.CurrentRoom and not CurrentRun.CurrentRoom.ExitsUnlocked and not (TableLength(LootObjects) > 0) then
-		table = mod.AddCure(table)
+	local map = GetMapName()
+	for map_name, map_data in pairs(mapPointsOfInterest) do
+		if map_name == map or map_name == "*" then
+			for _, object in pairs(map_data.Objects) do
+				if object.RequireUseable == false or IsUseable({Id = object.ObjectId}) then
+					local o = ShallowCopyTable(object)
+					o.Name = GetDisplayName({Text=o.Name, IgnoreSpecialFormatting=true})
+					table.insert(t, o)
+				end
+			end
+			if map_data.AddNPCs and GameState and GameState.Flags and not GameState.Flags.InFlashback then
+				t = AddNPCs(t)
+			end
+	
+			if map_data.SetupFunction ~= nil then
+				t = map_data.SetupFunction(t)
+			end
+		end
 	end
-	table = mod.AddCrossRoadExits(objects)
-	table = mod.AddFood(table)
-	table = mod.AddGold(table)
-	table = mod.AddDarkness(table)
-	table = mod.AddGemstones(table)
-	table = mod.AddNectar(table)
-	table = mod.AddDiamonds(table)
-	table = mod.AddUrns(table)
-	table = mod.AddFishingPoint(table)
-	table = mod.AddGiftRack(table)
+
+	table.sort(t, function(a,b) return a.Name < b.Name end)
+
 	if CurrentRun and CurrentRun.CurrentRoom and CurrentRun.CurrentRoom.ExitsUnlocked then
-		table = mod.AddTrove(table)
-		table = mod.AddWell(table)
-		table = mod.AddPool(table)
+		t = AddTrove(t)
+		t = AddWell(t)
+		t = AddPool(t)
 	end
-	table = mod.AddSkelly(table)
-	table = mod.AddEscapeDoor(table)
-	if GameState and GameState.Flags and not GameState.Flags.InFlashback then
-		table = mod.AddNPCs(table)
-	end
-	table = mod.AddHouseContractor(table)
-	table = mod.AddWretchedBroker(table)
-	table = mod.AddHeadChef(table)
-	table = mod.AddSackOfObols(table)
-	return table
+
+	return t
 end
 
-function mod.InitializeObjectList(objects)
+function InitializeObjectList(objects)
 	local initTable = CollapseTableOrderedByKeys(objects) or {}
 	local copy = {}
 	for i, v in ipairs(initTable) do
@@ -596,251 +483,7 @@ function mod.InitializeObjectList(objects)
 	return copy
 end
 
-function mod.AddCrossRoadExits(objects)
-	local map = mod.GetMapName()
-	if map == "Hub_Main" then
-		local door = MapState.ActiveObstacles[391697]
-		door.Name = "Training room"
-		if not mod.ObjectAlreadyPresent(door, objects) then
-			table.insert(objects, door)
-		end
-	elseif map == "Hub_PreRun" then
-		local door = MapState.ActiveObstacles[421119]
-		door.Name = "Crossroads"
-		if not mod.ObjectAlreadyPresent(door, objects) then
-			table.insert(objects, door)
-		end
-	end
-	return objects
-end
-
-function mod.AddCure(objects)
-	local NV = GetIdsByType({ Name = "PoisonCureFountainStyx" })
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	for ID = #NV, 1, -1 do
-		if IsUseable({ Id = NV[ID] }) then
-			local cure = {
-				["ObjectId"] = NV[ID],
-				["Name"] = "Mandragora Curing Pool",
-			}
-			if not mod.ObjectAlreadyPresent(cure, copy) then
-				copy = mod.TableInsertAtBeginning(copy, cure)
-			end
-		end
-	end
-	return copy
-end
-
-function mod.AddFood(objects)
-	local NV = CombineTablesIPairs(GetIdsByType({ Name = "HealDropMinor" }),
-		GetIdsByType({ Name = "RoomRewardHealDrop" }))
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	NV = GetIdsByType({ Name = "HealDropMinor" })
-	if TableLength(NV) > 0 then
-		for ID = 1, #NV do
-			if IsUseable({ Id = NV[ID] }) then
-				local food = {
-					["ObjectId"] = NV[ID],
-					["Name"] = "Food (Dropped)",
-				}
-				if not mod.ObjectAlreadyPresent(food, copy) then
-					table.insert(copy, food)
-				end
-			end
-		end
-	end
-	NV = GetIdsByType({ Name = "RoomRewardHealDrop" })
-	if TableLength(NV) > 0 then
-		for ID = 1, #NV do
-			if IsUseable({ Id = NV[ID] }) then
-				local food = {
-					["ObjectId"] = NV[ID],
-					["Name"] = "Food",
-				}
-				if not mod.ObjectAlreadyPresent(food, copy) then
-					table.insert(copy, food)
-				end
-			end
-		end
-	end
-	return copy
-end
-
-function mod.AddGold(objects)
-	local NV = CombineTablesIPairs(GetIdsByType({ Name = "RoomRewardMoneyDrop" }),
-		GetIdsByType({ Name = "MinorMoneyDrop" }))
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	for ID = 1, #NV do
-		if IsUseable({ Id = NV[ID] }) then
-			local obols = {
-				["ObjectId"] = NV[ID],
-				["Name"] = "Gold",
-			}
-			if not mod.ObjectAlreadyPresent(obols, copy) then
-				table.insert(copy, obols)
-			end
-		end
-	end
-	return copy
-end
-
-function mod.AddDarkness(objects)
-	local NV = CombineTablesIPairs(GetIdsByType({ Name = "RoomRewardMetaPointDrop" }),
-		GetIdsByType({ Name = "RoomRewardMetaPointDropRunProgress" }))
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	for ID = 1, #NV do
-		if IsUseable({ Id = NV[ID] }) then
-			local darkness = {
-				["ObjectId"] = NV[ID],
-				["Name"] = "Darkness",
-			}
-			if not mod.ObjectAlreadyPresent(darkness, copy) then
-				table.insert(copy, darkness)
-			end
-		end
-	end
-	return copy
-end
-
-function mod.AddGemstones(objects)
-	local NV = CombineTablesIPairs(GetIdsByType({ Name = "GemDrop" }), GetIdsByType({ Name = "GemDropRunProgress" }))
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	for ID = 1, #NV do
-		if IsUseable({ Id = NV[ID] }) then
-			local gem = {
-				["ObjectId"] = NV[ID],
-				["Name"] = "Gemstones",
-			}
-			if not mod.ObjectAlreadyPresent(gem, copy) then
-				table.insert(copy, gem)
-			end
-		end
-	end
-	return copy
-end
-
-function mod.AddNectar(objects)
-	local NV = CombineTablesIPairs(GetIdsByType({ Name = "GiftDrop" }), GetIdsByType({ Name = "GiftDropRunProgress" }))
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	for ID = 1, #NV do
-		if IsUseable({ Id = NV[ID] }) then
-			local nectar = {
-				["ObjectId"] = NV[ID],
-				["Name"] = "Nectar",
-			}
-			if not mod.ObjectAlreadyPresent(nectar, copy) then
-				table.insert(copy, nectar)
-			end
-		end
-	end
-	return copy
-end
-
-function mod.AddDiamonds(objects)
-	local NV = GetIdsByType({ Name = "SuperGemDrop" })
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	for ID = 1, #NV do
-		if IsUseable({ Id = NV[ID] }) then
-			local diamond = {
-				["ObjectId"] = NV[ID],
-				["Name"] = "Diamond",
-			}
-			if not mod.ObjectAlreadyPresent(diamond, copy) then
-				table.insert(copy, diamond)
-			end
-		end
-	end
-	return copy
-end
-
-function mod.AddUrns(objects)
-	if CurrentRun and IsCombatEncounterActive(CurrentRun) then
-		return objects
-	end
-	local urns = CollapseTableOrderedByKeys(ActiveEnemies)
-	if TableLength(urns) == 0 then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	for i = 1, #urns do
-		if urns[i].Name == "Breakable" and urns[i].MoneyDropOnDeath and urns[i].MoneyDropOnDeath.Chance > 0 then
-			local urn = {
-				["ObjectId"] = urns[i].ObjectId,
-				["Name"] = "Breakable Urn (Obols)",
-			}
-			if not mod.ObjectAlreadyPresent(urn, copy) then
-				table.insert(copy, urn)
-			end
-		end
-	end
-	return copy
-end
-
-function mod.AddFishingPoint(objects)
-	if not (CurrentRun.CurrentRoom.ForceFishing and CurrentRun.CurrentRoom.FishingPointId and IsUseable({ Id = CurrentRun.CurrentRoom.FishingPointId })) then
-		return objects
-	end
-	local canFishInEncounter = true
-	if CurrentRun.CurrentRoom.Encounter and CurrentRun.CurrentRoom.Encounter.BlockFishingBeforeStart and not CurrentRun.CurrentRoom.Encounter.Completed then
-		canFishInEncounter = false
-	end
-	if (CurrentRun and IsCombatEncounterActive(CurrentRun)) or not canFishInEncounter then
-		return objects
-	end
-	local NV = CurrentRun.CurrentRoom.FishingPointId
-	local copy = ShallowCopyTable(objects)
-	local fish = {
-		["ObjectId"] = CurrentRun.CurrentRoom.FishingPointId,
-		["Name"] = "Fishing Point",
-	}
-	if not mod.ObjectAlreadyPresent(fish, copy) then
-		table.insert(copy, fish)
-	end
-	return copy
-end
-
-function mod.AddGiftRack(objects)
-	local NV = GetIdsByType({ Name = "GiftRack" })
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local ID = NV[1]
-	if not IsUseable({ Id = NV[1] }) then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	local rack = {
-		["ObjectId"] = NV[1],
-		["Name"] = "Keepsake Display Case",
-	}
-	if not mod.ObjectAlreadyPresent(rack, copy) then
-		table.insert(copy, rack)
-	end
-	return copy
-end
-
-function mod.AddTrove(objects)
+function AddTrove(objects)
 	if not (CurrentRun.CurrentRoom.ChallengeSwitch and IsUseable({ Id = CurrentRun.CurrentRoom.ChallengeSwitch.ObjectId })) then
 		return objects
 	end
@@ -849,16 +492,16 @@ function mod.AddTrove(objects)
 	local switch = {
 		["ObjectId"] = CurrentRun.CurrentRoom.ChallengeSwitch.ObjectId,
 		["Name"] = "Infernal Trove (" ..
-			(nameToPreviewName[CurrentRun.CurrentRoom.ChallengeSwitch.RewardType] or CurrentRun.CurrentRoom.ChallengeSwitch.RewardType) ..
+			(GetDisplayName({Text = CurrentRun.CurrentRoom.ChallengeSwitch.RewardType or CurrentRun.CurrentRoom.ChallengeSwitch.RewardType, IgnoreSpecialFormatting=true})) ..
 			")",
 	}
-	if not mod.ObjectAlreadyPresent(switch, copy) then
+	if not ObjectAlreadyPresent(switch, copy) then
 		table.insert(copy, switch)
 	end
 	return copy
 end
 
-function mod.AddWell(objects)
+function AddWell(objects)
 	if not (CurrentRun.CurrentRoom.WellShop and IsUseable({ Id = CurrentRun.CurrentRoom.WellShop.ObjectId })) then
 		return objects
 	end
@@ -868,13 +511,13 @@ function mod.AddWell(objects)
 		["ObjectId"] = CurrentRun.CurrentRoom.WellShop.ObjectId,
 		["Name"] = "Well of Charon",
 	}
-	if not mod.ObjectAlreadyPresent(well, copy) then
+	if not ObjectAlreadyPresent(well, copy) then
 		table.insert(copy, well)
 	end
 	return copy
 end
 
-function mod.AddPool(objects)
+function AddPool(objects)
 	if not (CurrentRun.CurrentRoom.SellTraitShop and IsUseable({ Id = CurrentRun.CurrentRoom.SellTraitShop.ObjectId })) then
 		return objects
 	end
@@ -884,59 +527,14 @@ function mod.AddPool(objects)
 		["ObjectId"] = CurrentRun.CurrentRoom.SellTraitShop.ObjectId,
 		["Name"] = "Pool of Purging",
 	}
-	if not mod.ObjectAlreadyPresent(pool, copy) then
+	if not ObjectAlreadyPresent(pool, copy) then
 		table.insert(copy, pool)
 	end
 	return copy
 end
 
-function mod.AddSkelly(objects)
-	if not string.find(mod.GetMapName(), "Hub_PreRun") then
-		return objects
-	end
-	local NV = GetIdsByType({ Name = "NPC_Skelly_01" })
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local ID = NV[1]
-	if not (ActiveEnemies[NV[1]] and not ActiveEnemies[NV[1]].IsDead) then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	local skelly = {
-		["ObjectId"] = NV[1],
-		["Name"] = "Schelemeus",
-	}
-	if not mod.ObjectAlreadyPresent(skelly, copy) then
-		copy = mod.TableInsertAtBeginning(copy, skelly)
-	end
-	return copy
-end
 
-function mod.AddEscapeDoor(objects)
-	if not string.find(mod.GetMapName(), "Hub_PreRun") then
-		return objects
-	end
-	local NV = GetIdsByType({ Name = "NewRunDoor" })
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local ID = NV[1]
-	if not IsUseable({ Id = NV[1] }) then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	local window = {
-		["ObjectId"] = NV[1],
-		["Name"] = "Escape Window",
-	}
-	if not mod.ObjectAlreadyPresent(window, copy) then
-		table.insert(copy, window)
-	end
-	return copy
-end
-
-function mod.AddNPCs(objects)
+function AddNPCs(objects)
 	if CurrentRun and IsCombatEncounterActive(CurrentRun) then
 		return objects
 	end
@@ -950,20 +548,20 @@ function mod.AddNPCs(objects)
 		if IsUseable({ Id = npcs[i].ObjectId }) then
 			local npc = {
 				["ObjectId"] = npcs[i].ObjectId,
-				["Name"] = nameToPreviewName[npcs[i].Name] or npcs[i].Name,
+				["Name"] = GetDisplayName({Text=npcs[i].Name, IgnoreSpecialFormatting=true}),
 			}
-			if npcs[i].Name == "NPC_Hades_01" and mod.GetMapName() == "Hub_Main" then --Hades in house
+			if npcs[i].Name == "NPC_Hades_01" and GetMapName() == "Hub_Main" then --Hades in house
 				if ActiveEnemies[555686] then                                       --Hades is in garden
 					npc["ObjectId"] = 555686
 				elseif GetDistance({ Id = npc["ObjectId"], DestinationId = 422028 }) < 100 then --Hades on his throne
 					npc["DestinationOffsetY"] = 150
 				end
-			elseif npcs[i].Name == "NPC_Cerberus_01" and mod.GetMapName() == "Hub_Main" and GetDistance({ Id = npc["ObjectId"], DestinationId = 422028 }) > 500 then                                                                                                 --Cerberus not present in house
+			elseif npcs[i].Name == "NPC_Cerberus_01" and GetMapName() == "Hub_Main" and GetDistance({ Id = npc["ObjectId"], DestinationId = 422028 }) > 500 then                                                                                                 --Cerberus not present in house
 				skip = true
 			elseif npcs[i].Name == "NPC_Cerberus_Field_01" and TableLength(MapState.OfferedExitDoors) == 1 and CollapseTable(MapState.OfferedExitDoors)[1].Room.Name:find("D_Boss", 1, true) == 1 and GetDistance({ Id = npc["ObjectId"], DestinationId = 551569 }) == 0 then --Cerberus in Styx after having been given satyr sack
 				skip = true
 			end
-			if not mod.ObjectAlreadyPresent(npc, copy) and not skip then
+			if not ObjectAlreadyPresent(npc, copy) and not skip then
 				table.insert(copy, npc)
 			end
 		end
@@ -971,118 +569,14 @@ function mod.AddNPCs(objects)
 	return copy
 end
 
-function mod.AddHouseContractor(objects)
-	if mod.GetMapName() ~= "Hub_Main" or (GameState and GameState.Flags and GameState.Flags.InFlashback) then
-		return objects
-	end
-	local NV = { 210158 }
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local ID = NV[1]
-	if not IsUseable({ Id = NV[1] }) then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	local contractor = {
-		["ObjectId"] = NV[1],
-		["Name"] = "House Contractor",
-		["DestinationOffsetY"] = 25,
-	}
-	if not mod.ObjectAlreadyPresent(contractor, copy) then
-		table.insert(copy, contractor)
-	end
-	return copy
-end
-
-function mod.AddWretchedBroker(objects)
-	if mod.GetMapName() ~= "Hub_Main" or (GameState and GameState.Flags and GameState.Flags.InFlashback) then
-		return objects
-	end
-	local NV = { 423390 }
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local ID = NV[1]
-	if not IsUseable({ Id = NV[1] }) then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	local broker = {
-		["ObjectId"] = NV[1],
-		["Name"] = "Wretched Broker",
-		["DestinationOffsetX"] = -225,
-		["DestinationOffsetY"] = -100
-	}
-	if not mod.ObjectAlreadyPresent(broker, copy) then
-		table.insert(copy, broker)
-	end
-	return copy
-end
-
-function mod.AddHeadChef(objects)
-	if mod.GetMapName() ~= "Hub_Main" or (GameState and GameState.Flags and GameState.Flags.InFlashback) then
-		return objects
-	end
-	local NV = { 423399 }
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local ID = NV[1]
-	if not IsUseable({ Id = NV[1] }) then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	local chef = {
-		["ObjectId"] = NV[1],
-		["Name"] = "Head Chef",
-	}
-	if not mod.ObjectAlreadyPresent(chef, copy) then
-		table.insert(copy, chef)
-	end
-	return copy
-end
-
-function mod.AddSackOfObols(objects)
-	local curMap = mod.GetMapName()
-	if not string.find(curMap, "Shop") and not string.find(curMap, "PreBoss") and not string.find(curMap, "D_Hub") then
-		return objects
-	end
-	if not (CurrentRun and CurrentRun.CurrentRoom and CurrentRun.CurrentRoom.Store and CurrentRun.CurrentRoom.Store.SpawnedStoreItems) then
-		return objects
-	end
-	local NV = {}
-	for k, v in pairs(CurrentRun.CurrentRoom.Store.SpawnedStoreItems) do
-		if v.Name == "ForbiddenShopItem" then
-			table.insert(NV, v.ObjectId)
-		end
-	end
-	if TableLength(NV) == 0 then
-		return objects
-	end
-	local ID = NV[1]
-	if not IsUseable({ Id = NV[1] }) then
-		return objects
-	end
-	local copy = ShallowCopyTable(objects)
-	local sack = {
-		["ObjectId"] = NV[1],
-		["Name"] = "Sack of Obols (Elite)",
-	}
-	if not mod.ObjectAlreadyPresent(sack, copy) then
-		table.insert(copy, sack)
-	end
-	return copy
-end
-
-function mod.ObjectAlreadyPresent(object, objects)
+function ObjectAlreadyPresent(object, objects)
 	found = false
 	for k, v in ipairs(objects) do
 		if object.ObjectId == v.ObjectId then
 			found = true
 		end
 	end
-	if CurrentRun and CurrentRun.CurrentRoom and CurrentRun.CurrentRoom.Store and mod.NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) > 0 then
+	if CurrentRun and CurrentRun.CurrentRoom and CurrentRun.CurrentRoom.Store and NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) > 0 then
 		for k, v in pairs(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) do
 			if object.ObjectId == v.ObjectId and v.Name ~= "ForbiddenShopItem" then
 				found = true
@@ -1092,7 +586,7 @@ function mod.ObjectAlreadyPresent(object, objects)
 	return found
 end
 
-function mod.TableInsertAtBeginning(baseTable, insertValue)
+function TableInsertAtBeginning(baseTable, insertValue)
 	if baseTable == nil or insertValue == nil then
 		return
 	end
@@ -1104,32 +598,7 @@ function mod.TableInsertAtBeginning(baseTable, insertValue)
 	return returnTable
 end
 
-function mod.GetWeaponDisplayConditions(name)
-	found = false
-	for k, weaponName in ipairs(WeaponSets.HeroPrimaryWeapons) do
-		if name == weaponName then
-			found = true
-		end
-	end
-	if not found then
-		return ""
-	end
-	if CurrentRun.Hero.Weapons[name] ~= nil then
-		if IsWeaponUnused(name) then
-			return " (Equipped, Dark Thirst)"
-		else
-			return " (Equipped)"
-		end
-	else
-		if IsWeaponUnused(name) then
-			return " (Dark Thirst)"
-		else
-			return ""
-		end
-	end
-end
-
-function mod.OpenRewardMenu(rewards)
+function OpenRewardMenu(rewards)
 	local screen = DeepCopyTable(ScreenData.BlindAccessibilityRewardMenu)
 
 	if IsScreenOpen(screen.Name) then
@@ -1144,27 +613,28 @@ function mod.OpenRewardMenu(rewards)
 	components.ShopBackgroundDim = CreateScreenComponent({ Name = "rectangle01", Group = "Menu_UI" })
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Menu_UI_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
-	components.CloseButton.OnPressedFunctionName = "BlindAccess.CloseRewardMenu"
-	components.CloseButton.ControlHotkey = "Cancel"
+	components.CloseButton.OnPressedFunctionName = "CloseRewardMenu"
+	components.CloseButton.ControlHotkeys = { "Cancel", }
+	components.CloseButton.MouseControlHotkeys  = { "Cancel", }
 
 	SetScale({ Id = components.ShopBackgroundDim.Id, Fraction = 4 })
 	SetColor({ Id = components.ShopBackgroundDim.Id, Color = { 0, 0, 0, 1 } })
 
-	mod.CreateRewardButtons(screen, rewards)
+	CreateRewardButtons(screen, rewards)
 	screen.KeepOpen = true
 	-- thread(HandleWASDInput, screen)
 	HandleScreenInput(screen)
 	-- SetConfigOption({ Name = "ExclusiveInteractGroup", Value = "Menu_UI" })
 end
 
-function mod.CreateRewardButtons(screen, rewards)
+function CreateRewardButtons(screen, rewards)
 	local xPos = 960
 	local startY = 235
 	local yIncrement = 55
 	local curY = startY
 	local components = screen.Components
 	local isFirstButton = true
-	if not string.find(mod.GetMapName(), "Hub_PreRun") and mod.GetMapName():find("Hub_Main", 1, true) ~= 1 and mod.GetMapName():find("E_", 1, true) ~= 1 then
+	if not string.find(GetMapName(), "Hub_PreRun") and GetMapName():find("Hub_Main", 1, true) ~= 1 and GetMapName():find("E_", 1, true) ~= 1 then
 		components.statsTextBacking = CreateScreenComponent({
 			Name = "BlankObstacle",
 			Group = "Menu_UI_Rewards",
@@ -1217,6 +687,9 @@ function mod.CreateRewardButtons(screen, rewards)
 			Justification = "Left",
 		})
 		curY = curY + yIncrement
+	else
+		startY = 110
+		curY = startY
 	end
 	for k, reward in pairs(rewards) do
 		if reward.IsResourceHarvest then
@@ -1230,19 +703,24 @@ function mod.CreateRewardButtons(screen, rewards)
 					X = xPos,
 					Y = curY
 				})
+				SetScaleX({Id = components[buttonKey].Id, Fraction=4})
+			
+			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
+
 			components[buttonKey].index = k
 			components[buttonKey].reward = {ObjectId = reward.Id}
-			components[buttonKey].OnPressedFunctionName = "BlindAccess.GoToReward"
+			components[buttonKey].OnPressedFunctionName = "GoToReward"
 			if reward.Args ~= nil and reward.Args.ForceLootName then
 				displayText = reward.Args.ForceLootName:gsub("Upgrade", ""):gsub("Drop", "")
 			end
 			displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
-			displayText = (displayText .. mod.GetWeaponDisplayConditions(reward.Name)) or displayText
+			--displayText = (displayText .. GetWeaponDisplayConditions(reward.Name)) or displayText
 			CreateTextBox({
 				Id = components[buttonKey].Id,
 				Text = displayText,
 				FontSize = 24,
-				OffsetX = -320,
+				OffsetX = -100,
 				OffsetY = 0,
 				Color = Color.White,
 				Font = "P22UndergroundSCMedium",
@@ -1268,19 +746,22 @@ function mod.CreateRewardButtons(screen, rewards)
 					X = xPos,
 					Y = curY
 				})
+				SetScaleX({Id = components[buttonKey].Id, Fraction=4})
+			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
 			components[buttonKey].index = k
 			components[buttonKey].reward = reward
-			components[buttonKey].OnPressedFunctionName = "BlindAccess.GoToReward"
+			components[buttonKey].OnPressedFunctionName = "GoToReward"
 			if reward.Args ~= nil and reward.Args.ForceLootName then
 				displayText = reward.Args.ForceLootName:gsub("Upgrade", ""):gsub("Drop", "")
 			end
 			displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
-			displayText = (displayText .. mod.GetWeaponDisplayConditions(reward.Name)) or displayText
+			--displayText = (displayText .. GetWeaponDisplayConditions(reward.Name)) or displayText
 			CreateTextBox({
 				Id = components[buttonKey].Id,
 				Text = displayText,
 				FontSize = 24,
-				OffsetX = -320,
+				OffsetX = -200,
 				OffsetY = 0,
 				Color = Color.White,
 				Font = "P22UndergroundSCMedium",
@@ -1299,9 +780,15 @@ function mod.CreateRewardButtons(screen, rewards)
 	end
 end
 
-function mod.GoToReward(screen, button)
+-- function MouseOver(screen, button)
+-- 	--Does nothing just exists so that the OnMouseOver functionality of the modified UI script using TOLk interacts with the button
+-- 	--without setting this the OnMouseover trigger is returned out of before TOLk is called
+-- 	--Not needed if using the thunderstore version of TOLk compatability
+-- end
+
+function GoToReward(screen, button)
 	PlaySound({ Name = "/SFX/Menu Sounds/ContractorItemPurchase" })
-	mod.CloseRewardMenu(screen, button)
+	CloseRewardMenu(screen, button)
 	local RewardID = nil
 	RewardID = button.reward.ObjectId
 	destinationOffsetX = button.reward.DestinationOffsetX or 0
@@ -1317,7 +804,7 @@ function mod.GoToReward(screen, button)
 	end
 end
 
-function mod.CloseRewardMenu(screen, button)
+function CloseRewardMenu(screen, button)
 	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = nil })
 	OnScreenCloseStarted(screen)
 	CloseScreen(GetAllIds(screen.Components), 0.15)
@@ -1326,23 +813,8 @@ function mod.CloseRewardMenu(screen, button)
 	ShowCombatUI(screen.Name)
 end
 
--- OnControlPressed { "ScrollDown", function(triggerArgs)
--- 	local curMap = GetMapName({})
--- 	if not string.find(curMap, "Shop") and not string.find(curMap, "PreBoss") and not string.find(curMap, "D_Hub") then
--- 		return
--- 	end
--- 	if CurrentRun.CurrentRoom.Store == nil then
--- 		return
--- 	elseif mod.NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) == 0 then
--- 		return
--- 	end
--- 	if IsScreenOpen("TraitTrayScreen") then
--- 		thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
--- 		mod.OpenStoreMenu(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems)
--- 	end
--- end }
 
-function mod.NumUseableObjects(objects)
+function NumUseableObjects(objects)
 	local count = 0
 	if objects ~= nil then
 		for k, object in pairs(objects) do
@@ -1354,7 +826,7 @@ function mod.NumUseableObjects(objects)
 	return count
 end
 
-function mod.OpenStoreMenu(items)
+function OpenStoreMenu(items)
 	local screen = DeepCopyTable(ScreenData.BlindAccesibilityStoreMenu)
 
 	if IsScreenOpen(screen.Name) then
@@ -1370,39 +842,20 @@ function mod.OpenStoreMenu(items)
 
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Asses_UI_Store_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
-	components.CloseButton.OnPressedFunctionName = "BlindAccess.CloseItemScreen"
-	components.CloseButton.ControlHotkey = "Cancel"
+	components.CloseButton.OnPressedFunctionName = "CloseItemScreen"
+	components.CloseButton.ControlHotkeys = { "Cancel", }
+	components.CloseButton.MouseControlHotkeys  = { "Cancel", }
 
 	SetScale({ Id = components.ShopBackgroundDim.Id, Fraction = 4 })
 	SetColor({ Id = components.ShopBackgroundDim.Id, Color = { 0, 0, 0, 1 } })
 
-	mod.CreateItemButtons(screen, items)
+	CreateItemButtons(screen, items)
 	screen.KeepOpen = true
 	HandleScreenInput(screen)
 	-- SetConfigOption({ Name = "ExclusiveInteractGroup", Value = "Asses_UI_Store" })
 end
 
-local nameToPreviewName = {
-	["HermesUpgrade"] = "Hermes",
-	["MetaPoint"] = "25 Darkness",
-	["Gem"] = "20 Gemstones",
-	["LockKey"] = "Chthonic Key",
-	["Gift"] = "Nectar",
-	["RoomRewardMaxHealth"] = "Centaur Heart",
-	["StackUpgrade"] = "Pom of Power",
-	["StackUpgradeRare"] = "Double Pom of Power",
-	["WeaponUpgrade"] = "Daedalus Hammer",
-	["ChaosWeaponUpgrade"] = "Anvil of Fates",
-	["RoomRewardMoney"] = "Obols",
-	["SuperLockKey"] = "Titan Blood",
-	["SuperGem"] = "Diamond",
-	["SuperGift"] = "Ambrosia",
-	["BlindBoxLoot"] = "Random God Boon",
-	["RoomRewardHeal"] = "Food",
-	["RandomStack"] = "Pom Slice",
-}
-
-function mod.CreateItemButtons(screen, items)
+function CreateItemButtons(screen, items)
 	local xPos = 960
 	local startY = 235
 	local yIncrement = 75
@@ -1462,7 +915,9 @@ function mod.CreateItemButtons(screen, items)
 				})
 			components[buttonKey].index = k
 			components[buttonKey].item = item
-			components[buttonKey].OnPressedFunctionName = "BlindAccess.MoveToItem"
+			components[buttonKey].OnPressedFunctionName = "MoveToItem"
+			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
 
 			if displayText == "RandomLoot" then
 				if LootObjects[item.ObjectId] ~= nil then
@@ -1472,7 +927,7 @@ function mod.CreateItemButtons(screen, items)
 			displayText = displayText:gsub("RoomReward", ""):gsub("StoreReward", "") or displayText
 			CreateTextBox({
 				Id = components[buttonKey].Id,
-				Text = GetDisplayName({Text=displayText}),
+				Text = GetDisplayName({Text=displayText, IgnoreSpecialFormatting=true}),
 				UseDescription = false,
 				FontSize = 24,
 				OffsetX = -520,
@@ -1508,16 +963,16 @@ function mod.CreateItemButtons(screen, items)
 	end
 end
 
-function mod.MoveToItem(screen, button)
+function MoveToItem(screen, button)
 	PlaySound({ Name = "/SFX/Menu Sounds/ContractorItemPurchase" })
-	mod.CloseItemScreen(screen, button)
+	CloseItemScreen(screen, button)
 	local ItemID = button.item.ObjectId
 	if ItemID ~= nil then
 		Teleport({ Id = CurrentRun.Hero.ObjectId, DestinationId = ItemID })
 	end
 end
 
-function mod.CloseItemScreen(screen, button)
+function CloseItemScreen(screen, button)
 	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = nil })
 	OnScreenCloseStarted(screen)
 	CloseScreen(GetAllIds(screen.Components), 0.15)
@@ -1526,8 +981,240 @@ function mod.CloseItemScreen(screen, button)
 	ShowCombatUI(screen.Name)
 end
 
-ModUtil.Path.Override("SpawnStoreItemInWorld", function(itemData, kitId)
-	local spawnedItem = nil
+function CreateArcanaSpeechText(button, args, buttonArgs)
+	local c = DeepCopyTable(args)
+	c.SkipWrap = true
+	if button.OnMouseOverFunctionName == "MouseOverMetaUpgrade" then
+		DestroyTextBox({ Id = button.Id })
+		local cardName = button.CardName
+		local metaUpgradeData = MetaUpgradeCardData[cardName]
+		
+		c.UseDescription = false
+
+		local state = "HIDDEN"
+		if buttonArgs.CardState then
+			state = buttonArgs.CardState
+		else
+			if GameState.MetaUpgradeState[cardName].Unlocked then
+				state = "UNLOCKED"
+			elseif HasNeighboringUnlockedCards( buttonArgs.Row, buttonArgs.Column ) or (buttonArgs.Row == 1 and buttonArgs.Column == 1) then
+				state = "LOCKED"
+			end
+		end
+		
+		local stateText = GetDisplayName({Text="AwardMenuLocked", IgnoreSpecialFormatting=true})
+		if state == "UNLOCKED" then
+			stateText = GetDisplayName({Text = "Off", IgnoreSpecialFormatting=true})
+			if GameState.MetaUpgradeState[cardName].Equipped then
+				stateText = GetDisplayName({Text = "On", IgnoreSpecialFormatting=true})
+			end
+		end
+
+
+		c.Text = GetDisplayName({Text = c.Text, IgnoreSpecialFormatting=true}) .. ", State: " .. stateText .. ", "
+		c.Text = c.Text .. GetDisplayName({Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting=true}) .. metaUpgradeData.Cost .. GetDisplayName({Text="IncreaseMetaUpgradeCard", IgnoreSpecialFormatting=true}) .. ", "
+		if state == "LOCKED" then
+			local costText = GetDisplayName({Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting=true}) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
+
+			local totalResourceCosts = MetaUpgradeCardData[button.CardName].ResourceCost
+			for resource, cost in pairs(totalResourceCosts) do
+				costText = costText .. " " .. cost .. " " .. GetDisplayName({Text = resource, IgnoreSpecialFormatting=true})
+			end
+			c.Text = c.Text .. costText
+		end
+		
+		CreateTextBox(c)
+		CreateTextBox({
+			Id = c.Id,
+			Text = args.Text,
+			UseDescription = true,
+			LuaKey = c.LuaKey,
+			LuaValue = c.LuaValue,
+			SkipDraw = true,
+			SkipWrap = true,
+			Color = Color.Transparent
+		})
+		CreateTextBox({
+			Id = c.Id,
+			Text = metaUpgradeData.AutoEquipText,
+			SkipDraw = true,
+			SkipWrap = true,
+			Color = Color.Transparent
+		})
+
+		return nil
+	else
+		local cardTitle = button.CardName
+		local cardMultiplier = 1
+		if GameState.MetaUpgradeState[ cardTitle ].AdjacencyBonuses and GameState.MetaUpgradeState[ cardTitle ].AdjacencyBonuses.CustomMultiplier then
+			cardMultiplier = cardMultiplier + GameState.MetaUpgradeState[ cardTitle ].AdjacencyBonuses.CustomMultiplier
+		end
+		local cardData = {}
+		if MetaUpgradeCardData[cardTitle].TraitName then
+			cardData = GetProcessedTraitData({ Unit = CurrentRun.Hero, TraitName = MetaUpgradeCardData[cardTitle].TraitName , Rarity = TraitRarityData.RarityUpgradeOrder[ GetMetaUpgradeLevel( cardTitle )], CustomMultiplier = cardMultiplier })
+			local nextLevelCardData = GetProcessedTraitData({ Unit = CurrentRun.Hero, TraitName = MetaUpgradeCardData[cardTitle].TraitName , Rarity = TraitRarityData.RarityUpgradeOrder[ GetMetaUpgradeLevel( cardTitle ) + 1], CustomMultiplier = cardMultiplier })
+			SetTraitTextData( cardData, { ReplacementTraitData = nextLevelCardData })
+		end
+		if TraitData[MetaUpgradeCardData[cardTitle].TraitName].CustomUpgradeText then
+			cardTitle = TraitData[MetaUpgradeCardData[cardTitle].TraitName].CustomUpgradeText
+		end
+		
+			local costText = ""
+			if CanUpgradeMetaUpgrade( button.CardName ) then 
+			local state = "HIDDEN"
+			if buttonArgs.CardState then
+				state = buttonArgs.CardState
+			else
+				if GameState.MetaUpgradeState[button.CardName].Unlocked then
+					state = "UNLOCKED"
+				elseif HasNeighboringUnlockedCards( buttonArgs.Row, buttonArgs.Column ) or (buttonArgs.Row == 1 and buttonArgs.Column == 1) then
+					state = "LOCKED"
+				end
+			end
+
+			if state == "UNLOCKED" then
+				costText = GetDisplayName({Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting=true}) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
+
+				local totalResourceCosts = MetaUpgradeCardData[button.CardName].UpgradeResourceCost[GetMetaUpgradeLevel( button.CardName )]
+				for resource, cost in pairs(totalResourceCosts) do
+					costText = costText .. " " .. cost .. " " .. GetDisplayName({Text = resource, IgnoreSpecialFormatting=true})
+				end
+			end
+		end
+
+		c.Id = button.Id
+		c.Text = cardTitle
+		c.UseDescription = true
+		c.LuaKey = "TooltipData"
+		c.LuaValue = cardData
+		CreateTextBox({
+			Id = c.Id,
+			Text = GetDisplayName({Text = args.Text, IgnoreSpecialFormatting=true}) .. ", " .. costText,
+			SkipDraw = true,
+			SkipWrap = true,
+			Color = Color.Transparent
+		})
+		CreateTextBox(c)
+	end
+end
+
+function OnExitDoorUnlocked()
+	if TableLength(MapState.OfferedExitDoors) == 1 then
+		if GetDistance({ Id = 547487, DestinationId = 551569 }) == 0 then
+			return
+		elseif GetDistance({ Id = 547487, DestinationId = 551569 }) ~= 0 and GetDistance({ Id = CurrentRun.Hero.ObjectId, DestinationId = 547487 }) < 1000 then
+			return
+		end
+	end
+	local rewardsTable = ProcessTable(LootObjects)
+	if TableLength(rewardsTable) > 0 then
+		PlaySound({ Name = "/Leftovers/SFX/AnnouncementPing" })
+		return
+	end
+	local curMap = GetMapName()
+	if curMap == nil or string.find(curMap, "PostBoss") or string.find(curMap, "Hub_Main") or string.find(curMap, "Shop") or string.find(curMap, "D_Hub") or (string.find(curMap, "PreBoss") and CurrentRun.CurrentRoom.Store ~= nil and CurrentRun.CurrentRoom.Store.SpawnedStoreItems ~= nil) then
+		return
+	end
+	OpenAssesDoorShowerMenu(CollapseTable(MapState.OfferedExitDoors))
+end
+
+function OnCodexPress()
+	if IsScreenOpen("TraitTrayScreen") then
+		local rewardsTable = {}
+		local curMap = GetMapName()
+
+		--shop menu
+		if string.find(curMap, "Shop") or string.find(curMap, "PreBoss") or string.find(curMap, "D_Hub") then
+			if CurrentRun.CurrentRoom.Store == nil then
+				return
+			elseif NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) == 0 then
+				return
+			end
+			thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
+			OpenStoreMenu(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems)
+			return
+		end
+
+		if string.find(curMap, "Hub_PreRun") then
+			rewardsTable = ProcessTable(MapState.WeaponKits)
+		else
+			rewardsTable = ProcessTable(modutil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
+			local currentRoom = CurrentRun.CurrentRoom
+			if currentRoom.HarvestPointIds ~= nil and #currentRoom.HarvestPointIds > 0 then
+				for k, point in pairs(currentRoom.HarvestPointIds) do
+					if IsUseable({Id = point.Id}) then
+						table.insert(rewardsTable, {IsResourceHarvest=true, Type="Herb", Id=point.Id})
+					end
+				end
+			end
+			if currentRoom.ShovelPointId ~= nil and IsUseable({Id = currentRoom.ShovelPointId}) then
+				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Shovel", Id=currentRoom.ShovelPointId})
+			end
+			if currentRoom.PickaxePointId ~= nil and IsUseable({Id = currentRoom.PickaxePointId}) then
+				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Pickaxe", Id=currentRoom.PickaxePointId})
+			end
+			if currentRoom.ExorcismPointId ~= nil and IsUseable({Id = currentRoom.ExorcismPointId}) then
+				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Tablet", Id=currentRoom.ExorcismPointId})
+			end 
+			if currentRoom.FishingPointId ~= nil and IsUseable({Id = currentRoom.FishingPointId}) then
+				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Fish", Id=currentRoom.FishingPointId})
+			end 
+		end
+
+		local tempTable = {}
+		for k,v in pairs(rewardsTable) do
+			if v.ObjectId == nil or IsUseable({ Id = v.ObjectId }) then
+				tempTable[k] = v
+			end
+		end
+
+		rewardsTable = tempTable
+
+		if TableLength(rewardsTable) > 0 then
+			thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
+			OpenRewardMenu(rewardsTable)
+		else
+			return
+		end
+	end
+end
+
+function OnAdvancedTooltipPress()
+	if IsEmpty( ActiveScreens ) then
+		if not IsEmpty( MapState.CombatUIHide ) or not IsInputAllowed({}) then
+			-- If no screen is open, controlled entirely by input status
+			return
+		end
+	end
+
+	local rewardsTable = {}
+	if CurrentRun.Hero.IsDead and not IsScreenOpen("InventoryScreen") and not IsScreenOpen("BlindAccesibilityInventoryMenu") then
+		rewardsTable = ProcessTable(modutil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
+		if TableLength(rewardsTable) > 0 then
+			if not IsEmpty(ActiveScreens.TraitTrayScreen) then
+					thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
+			end
+			OpenRewardMenu(rewardsTable)
+		end
+	end
+end
+
+function wrap_GetDisplayName(baseFunc, args)
+	v = baseFunc(args)
+	if args.IgnoreSpecialFormatting then
+		return v:gsub("{[#!][^}]+}", "")
+	end
+	return v
+end
+
+function wrap_TraitTrayScreenShowCategory(baseFunc, ...)
+	if not screen.Closing then
+		return baseFunc(...)
+	end
+end
+
+function override_SpawnSotreItemInWorld(itemData, kitId)
+    local spawnedItem = nil
 	if itemData.Name == "WeaponUpgradeDrop" then
 		spawnedItem = CreateWeaponLoot({
 			SpawnPoint = kitId,
@@ -1599,10 +1286,89 @@ ModUtil.Path.Override("SpawnStoreItemInWorld", function(itemData, kitId)
 	else
 		DebugPrint({ Text = " Not spawned?!" .. itemData.Name })
 	end
-end, mod)
+end
 
-mod.Internal = ModUtil.UpValues(function()
-	return setupData
-end)
+function wrap_MetaUpgradeCardAction(screen, button)
+	local selectedButton = button
+	local cardName = selectedButton.CardName
+	local metaUpgradeData = MetaUpgradeCardData[cardName]
 
-setupData()
+	CreateArcanaSpeechText(selectedButton, { Id = selectedButton.Id,
+		Text = metaUpgradeData.Name,
+		SkipDraw = true,
+		Color = Color.Transparent,
+		UseDescription = true,
+		LuaKey = "TooltipData",
+		LuaValue = selectedButton.TraitData or {},
+	}, {CardState = selectedButton.CardState})
+
+end
+
+function wrap_UpdateMetaUpgradeCardCreateTextBox(baseFunc, screen, row, column, args)
+    if args.SkipDraw and not args.SkipWrap then
+        if args.LuaKey == nil then
+            return
+        end
+        local button = screen.Components[GetMetaUpgradeKey( row, column )]
+
+        CreateArcanaSpeechText(button, args, {Row=row, Column=column})
+        return nil
+    else
+        return baseFunc(args, ...)
+    end
+end
+
+function wrap_UpdateMetaUpgradeCard(screen, row, column)
+	local components = screen.Components
+	local button = components.MemCostModule
+	if button.Id then
+		local nextCostData = MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1 ].ResourceCost
+		local nextMetaUpgradeLevel = MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1 ]
+
+		local costText = GetDisplayName({Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting=true}) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
+
+		for resource, cost in pairs(nextCostData) do
+			costText = costText .. " " .. cost .. " " .. GetDisplayName({Text = resource, IgnoreSpecialFormatting=true})
+		end
+
+		DestroyTextBox({Id = button.Id})
+		CreateTextBox({
+			Id = button.Id,
+			Text = GetDisplayName({Text="IncreaseMetaUpgradeCard", IgnoreSpecialFormatting=true}) .. ", " .. costText,
+			SkipDraw = true,
+			Color = Color.Transparent
+		})
+		CreateTextBox({
+			Id = button.Id,
+			Text = "IncreaseMetaUpgradeCard",
+			SkipDraw = true,
+			Color = Color.Transparent,
+			UseDescription = true, LuaKey = "TempTextData", LuaValue = { Amount = nextMetaUpgradeLevel.CostIncrease}
+		})
+	end
+end
+
+function wrap_OpenGraspLimitAcreen()
+    local components = ActiveScreens.GraspLimitLayout.Components
+
+    local buttonKey = "GraspReadUIButton"
+    components[buttonKey] = CreateScreenComponent({
+        Name="ButtonDefault",
+        Group="Combat_Menu_TraitTray",
+        X = 600,
+        Y = 100
+    })
+    -- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
+    AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+
+    CreateTextBox({
+        Id = components[buttonKey].Id,
+        Text = "MetaUpgradeTable_UnableToEquip",
+        UseDescription = true,
+    })
+
+    thread(function()
+        wait(0.02)
+        TeleportCursor({DestinationId=components[buttonKey].Id})
+    end)
+end

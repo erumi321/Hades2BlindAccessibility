@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Menu to teleport the player to key points within the crossroads
-- Menu to teleport the player to any of the current room's doors 
-- Menu to teleport the player to any of the current room's rewards, harvest points, or if in a charon shop any of the available items in the store
-- Ability to simplify the inventory menu to only show the name and amount of each resource held
+- First version of the mod!
+- Hub area teleport menu (B/D-pad Left)
+- Door teleport menu (B/D-pad Left -> I/D-pad Right)
+- Reward / Harvest Point / Shop teleport menu (B/D-pad Left -> C/D-pad Up)
+- Inventory Simplifier (I/D-pad Right -> I/D-pad Right)
+- Arcana Menu integration with TOLk screen reader
+- Final Boss instant kill move -> 50 damage
