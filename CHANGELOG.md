@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- First version of the mod!
 - Hub area teleport menu (B/D-pad Left)
 - Door teleport menu (B/D-pad Left -> I/D-pad Right)
 - Reward / Harvest Point / Shop teleport menu (B/D-pad Left -> C/D-pad Up)

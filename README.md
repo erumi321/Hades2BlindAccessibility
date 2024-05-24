@@ -6,7 +6,7 @@ Adds blind / low visibility accessibility features to Hades 2. Current features 
         * Keyboard: B
 * A menu to teleport the player to any of the current room's doors 
     * Will open automatically when doors unlock
-    * To re-access menu at end of room open boon information then inventory, default controls are:
+    * To re-access menu at the end of a room open boon information then inventory, default controls are:
         * Gamepad: D-pad left then D-pad right
         * Keyboard: B then I
 * A menu to teleport the player to any of the current room's rewards, harvest points, or if in a charon shop any of the available items in the store
