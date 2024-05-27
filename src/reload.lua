@@ -80,18 +80,22 @@ function CreateAssesDoorButtons(screen, doors)
 	local components = screen.Components
 	local isFirstButton = true
 	
-	components.statsTextBacking = CreateScreenComponent({
-		Name = "BlankObstacle",
+	local healthKey = "AssesResourceMenuInformationHealth"
+	components[healthKey] =
+	CreateScreenComponent({
+		Name = "ButtonDefault",
 		Group = "Asses_UI",
-		Scale = 1,
-		X = xPos,
+		Scale = 0.8,
+		X = 960,
 		Y = curY
 	})
+	AttachLua({ Id = components[healthKey].Id, Table =components[healthKey] })
+
 	CreateTextBox({
-		Id = components.statsTextBacking.Id,
+		Id = components[healthKey].Id,
 		Text = "Health: " .. (CurrentRun.Hero.Health or 0) .. "/" .. (CurrentRun.Hero.MaxHealth or 0),
 		FontSize = 24,
-		OffsetX = 0,
+		OffsetX = -100,
 		OffsetY = 0,
 		Color = Color.White,
 		Font = "P22UndergroundSCMedium",
@@ -102,12 +106,23 @@ function CreateAssesDoorButtons(screen, doors)
 		Justification = "Left",
 	})
 	curY = curY + yIncrement
+
+	local armorKey = "AssesResourceMenuInformationArmor"
+	components[armorKey] =
+	CreateScreenComponent({
+		Name = "ButtonDefault",
+		Group = "Asses_UI",
+		Scale = 0.8,
+		X = 960,
+		Y = curY
+	})
+	AttachLua({ Id = components[armorKey].Id, Table =components[armorKey] })
 	CreateTextBox({
-		Id = components.statsTextBacking.Id,
+		Id = components[armorKey].Id,
 		Text = "Armor: " .. (CurrentRun.Hero.HealthBuffer or 0),
 		FontSize = 24,
-		OffsetX = 0,
-		OffsetY = yIncrement,
+		OffsetX = -100,
+		OffsetY = 0,
 		Color = Color.White,
 		Font = "P22UndergroundSCMedium",
 		Group = "Asses_UI",
@@ -117,12 +132,23 @@ function CreateAssesDoorButtons(screen, doors)
 		Justification = "Left",
 	})
 	curY = curY + yIncrement
+
+	local goldKey = "AssesResourceMenuInformationGold"
+	components[goldKey] =
+	CreateScreenComponent({
+		Name = "ButtonDefault",
+		Group = "Asses_UI",
+		Scale = 0.8,
+		X = 960,
+		Y = curY
+	})
+	AttachLua({ Id = components[goldKey].Id, Table =components[goldKey] })
 	CreateTextBox({
-		Id = components.statsTextBacking.Id,
+		Id = components[goldKey].Id,
 		Text = "Gold: " .. (GameState.Resources["Money"] or 0),
 		FontSize = 24,
-		OffsetX = 0,
-		OffsetY = yIncrement * 2,
+		OffsetX = -100,
+		-- OffsetY = yIncrement * 2,
 		Color = Color.White,
 		Font = "P22UndergroundSCMedium",
 		Group = "Asses_UI",
@@ -199,6 +225,8 @@ function CreateAssesDoorButtons(screen, doors)
 				Justification = "Left",
 			})
 			if isFirstButton then
+				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
+				wait(0.02)
 				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
 				isFirstButton = false
 			end
@@ -354,7 +382,9 @@ function CreateInventoryButtons(screen, resources)
 			Justification = "Left",
 		})
 		if isFirstButton then
-			TeleportCursor({ OffsetX = curX, OffsetY = curY })
+			TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
+			wait(0.02)
+			TeleportCursor({ OffsetX = xPos, OffsetY = curY })
 			isFirstButton = false
 		end
 		curY = curY + yIncrement
@@ -636,52 +666,78 @@ function CreateRewardButtons(screen, rewards)
 	local components = screen.Components
 	local isFirstButton = true
 	if not string.find(GetMapName(), "Hub_PreRun") and GetMapName():find("Hub_Main", 1, true) ~= 1 and GetMapName():find("E_", 1, true) ~= 1 then
-		components.statsTextBacking = CreateScreenComponent({
-			Name = "BlankObstacle",
-			Group = "Menu_UI_Rewards",
-			Scale = 1,
-			X = xPos,
+		local healthKey = "AssesResourceMenuInformationHealth"
+		components[healthKey] =
+		CreateScreenComponent({
+			Name = "ButtonDefault",
+			Group = "Asses_UI",
+			Scale = 0.8,
+			X = 960,
 			Y = curY
 		})
+		AttachLua({ Id = components[healthKey].Id, Table =components[healthKey] })
+	
 		CreateTextBox({
-			Id = components.statsTextBacking.Id,
+			Id = components[healthKey].Id,
 			Text = "Health: " .. (CurrentRun.Hero.Health or 0) .. "/" .. (CurrentRun.Hero.MaxHealth or 0),
 			FontSize = 24,
-			OffsetX = 0,
+			OffsetX = -100,
 			OffsetY = 0,
 			Color = Color.White,
 			Font = "P22UndergroundSCMedium",
-			Group = "Menu_UI_Rewards",
+			Group = "Asses_UI",
 			ShadowBlur = 0,
 			ShadowColor = { 0, 0, 0, 1 },
 			ShadowOffset = { 0, 2 },
 			Justification = "Left",
 		})
 		curY = curY + yIncrement
+	
+		local armorKey = "AssesResourceMenuInformationArmor"
+		components[armorKey] =
+		CreateScreenComponent({
+			Name = "ButtonDefault",
+			Group = "Asses_UI",
+			Scale = 0.8,
+			X = 960,
+			Y = curY
+		})
+		AttachLua({ Id = components[armorKey].Id, Table =components[armorKey] })
 		CreateTextBox({
-			Id = components.statsTextBacking.Id,
+			Id = components[armorKey].Id,
 			Text = "Armor: " .. (CurrentRun.Hero.HealthBuffer or 0),
 			FontSize = 24,
-			OffsetX = 0,
-			OffsetY = yIncrement,
+			OffsetX = -100,
+			OffsetY = 0,
 			Color = Color.White,
 			Font = "P22UndergroundSCMedium",
-			Group = "Menu_UI_Rewards",
+			Group = "Asses_UI",
 			ShadowBlur = 0,
 			ShadowColor = { 0, 0, 0, 1 },
 			ShadowOffset = { 0, 2 },
 			Justification = "Left",
 		})
 		curY = curY + yIncrement
+	
+		local goldKey = "AssesResourceMenuInformationGold"
+		components[goldKey] =
+		CreateScreenComponent({
+			Name = "ButtonDefault",
+			Group = "Asses_UI",
+			Scale = 0.8,
+			X = 960,
+			Y = curY
+		})
+		AttachLua({ Id = components[goldKey].Id, Table =components[goldKey] })
 		CreateTextBox({
-			Id = components.statsTextBacking.Id,
+			Id = components[goldKey].Id,
 			Text = "Gold: " .. (GameState.Resources["Money"] or 0),
 			FontSize = 24,
-			OffsetX = 0,
-			OffsetY = yIncrement * 2,
+			OffsetX = -100,
+			-- OffsetY = yIncrement * 2,
 			Color = Color.White,
 			Font = "P22UndergroundSCMedium",
-			Group = "Menu_UI_Rewards",
+			Group = "Asses_UI",
 			ShadowBlur = 0,
 			ShadowColor = { 0, 0, 0, 1 },
 			ShadowOffset = { 0, 2 },
@@ -732,6 +788,8 @@ function CreateRewardButtons(screen, rewards)
 				Justification = "Left",
 			})
 			if isFirstButton then
+				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
+				wait(0.02)
 				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
 				isFirstButton = false
 			end
@@ -773,6 +831,8 @@ function CreateRewardButtons(screen, rewards)
 				Justification = "Left",
 			})
 			if isFirstButton then
+				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
+				wait(0.02)
 				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
 				isFirstButton = false
 			end
@@ -863,19 +923,22 @@ function CreateItemButtons(screen, items)
 	local curY = startY
 	local components = screen.Components
 	local isFirstButton = true
-	components.statsTextBacking = CreateScreenComponent({
-		Name = "BlankObstacle",
+	local healthKey = "AssesResourceMenuInformationHealth"
+	components[healthKey] =
+	CreateScreenComponent({
+		Name = "ButtonDefault",
 		Group = "Asses_UI_Store",
-		Scale = 1,
-		X = xPos,
+		Scale = 0.8,
+		X = 960,
 		Y = curY
 	})
+	AttachLua({ Id = components[healthKey].Id, Table =components[healthKey] })
+
 	CreateTextBox({
-		Id = components.statsTextBacking.Id,
+		Id = components[healthKey].Id,
 		Text = "Health: " .. (CurrentRun.Hero.Health or 0) .. "/" .. (CurrentRun.Hero.MaxHealth or 0),
 		FontSize = 24,
-		Width = 360,
-		OffsetX = 0,
+		OffsetX = -100,
 		OffsetY = 0,
 		Color = Color.White,
 		Font = "P22UndergroundSCMedium",
@@ -886,13 +949,49 @@ function CreateItemButtons(screen, items)
 		Justification = "Left",
 	})
 	curY = curY + yIncrement
+
+	local armorKey = "AssesResourceMenuInformationArmor"
+	components[armorKey] =
+	CreateScreenComponent({
+		Name = "ButtonDefault",
+		Group = "Asses_UI_Store",
+		Scale = 0.8,
+		X = 960,
+		Y = curY
+	})
+	AttachLua({ Id = components[armorKey].Id, Table =components[armorKey] })
 	CreateTextBox({
-		Id = components.statsTextBacking.Id,
+		Id = components[armorKey].Id,
+		Text = "Armor: " .. (CurrentRun.Hero.HealthBuffer or 0),
+		FontSize = 24,
+		OffsetX = -100,
+		OffsetY = 0,
+		Color = Color.White,
+		Font = "P22UndergroundSCMedium",
+		Group = "Asses_UI_Store",
+		ShadowBlur = 0,
+		ShadowColor = { 0, 0, 0, 1 },
+		ShadowOffset = { 0, 2 },
+		Justification = "Left",
+	})
+	curY = curY + yIncrement
+
+	local goldKey = "AssesResourceMenuInformationGold"
+	components[goldKey] =
+	CreateScreenComponent({
+		Name = "ButtonDefault",
+		Group = "Asses_UI_Store",
+		Scale = 0.8,
+		X = 960,
+		Y = curY
+	})
+	AttachLua({ Id = components[goldKey].Id, Table =components[goldKey] })
+	CreateTextBox({
+		Id = components[goldKey].Id,
 		Text = "Gold: " .. (GameState.Resources["Money"] or 0),
 		FontSize = 24,
-		Width = 360,
-		OffsetX = 0,
-		OffsetY = yIncrement,
+		OffsetX = -100,
+		-- OffsetY = yIncrement * 2,
 		Color = Color.White,
 		Font = "P22UndergroundSCMedium",
 		Group = "Asses_UI_Store",
@@ -956,6 +1055,8 @@ function CreateItemButtons(screen, items)
 				Justification = "Left",
 			})
 			if isFirstButton then
+				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
+				wait(0.02)
 				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
 				isFirstButton = false
 			end

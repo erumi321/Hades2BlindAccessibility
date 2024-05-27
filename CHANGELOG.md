@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Buttons to read Health Gold and Armor within door / reward teleporter menu
+
+### Fixed
+
+- Bug where sometimes door buttons would not be read by TOLk
+
 ## [0.1.2] - 2024-05-27
 
 ### Fixed
