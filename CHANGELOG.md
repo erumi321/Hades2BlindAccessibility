@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- All code to work for Thunderstore and r2m format
+
 ## [0.1.1] - 2024-05-24
 
 ### Added

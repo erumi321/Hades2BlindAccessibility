@@ -43,7 +43,6 @@ local function on_ready()
 	if config.enabled == false then return end
 	
 	import 'ready.lua'
-	import 'sjson.lua'
 end
 
 local function on_reload()

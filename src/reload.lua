@@ -49,7 +49,7 @@ function OpenAssesDoorShowerMenu(doors)
 
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Asses_UI_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
-	components.CloseButton.OnPressedFunctionName = "CloseAssesDoorShowerScreen"
+	components.CloseButton.OnPressedFunctionName = "BlindAccessCloseAssesDoorShowerScreen"
 	components.CloseButton.ControlHotkeys = { "Cancel", }
 	components.CloseButton.MouseControlHotkeys  = { "Cancel" }
 
@@ -79,6 +79,7 @@ function CreateAssesDoorButtons(screen, doors)
 	local curY = startY
 	local components = screen.Components
 	local isFirstButton = true
+	
 	components.statsTextBacking = CreateScreenComponent({
 		Name = "BlankObstacle",
 		Group = "Asses_UI",
@@ -146,7 +147,7 @@ function CreateAssesDoorButtons(screen, doors)
 			else
 				displayText = displayText .. getDoorSound(door, false)
 			end
-			displayText = displayText:gsub("Room", "")
+			displayText = GetDisplayName({Text=displayText:gsub("Room", ""), IgnoreSpecialFormatting=true})
 
 			local args = { RoomData = door.Room }
 			local rewardOverrides = args.RoomData.RewardOverrides or {}
@@ -177,7 +178,7 @@ function CreateAssesDoorButtons(screen, doors)
 					Y = curY
 				})
 				SetScaleX({Id = components[buttonKey].Id, Fraction=2})
-			components[buttonKey].OnPressedFunctionName = "AssesDoorMenuSoundSet"
+			components[buttonKey].OnPressedFunctionName = "BlindAccessAssesDoorMenuSoundSet"
 			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
 			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
 			components[buttonKey].door = door
@@ -206,7 +207,7 @@ function CreateAssesDoorButtons(screen, doors)
 	end
 end
 
-function CloseAssesDoorShowerScreen(screen, button)
+function rom.game.BlindAccessCloseAssesDoorShowerScreen(screen, button)
 	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = nil })
 	OnScreenCloseStarted(screen)
 	CloseScreen(GetAllIds(screen.Components), 0.15)
@@ -215,9 +216,9 @@ function CloseAssesDoorShowerScreen(screen, button)
 	ShowCombatUI(screen.Name)
 end
 
-function AssesDoorMenuSoundSet(screen, button)
+function rom.game.BlindAccessAssesDoorMenuSoundSet(screen, button)
 	PlaySound({ Name = "/SFX/Menu Sounds/ContractorItemPurchase" })
-	CloseAssesDoorShowerScreen(screen, button)
+	rom.game.BlindAccessCloseAssesDoorShowerScreen(screen, button)
 	doDefaultSound(button.door)
 end
 
@@ -255,7 +256,7 @@ function getDoorSound(door, devotionSlot)
 		devotionLootName = devotionLootName:gsub("Progress", ""):gsub("Drop", ""):gsub("Run", ""):gsub("Upgrade", "")
 		return devotionLootName
 	else
-		local resourceName = room.ChosenRewardType:gsub("Progress", ""):gsub("Drop", ""):gsub("Run", "")
+		local resourceName = room.ChosenRewardType--:gsub("Progress", ""):gsub("Drop", ""):gsub("Run", "")
 		if door.Name == "ShrinePointDoor" then
 			resourceName = resourceName .. " (Infernal Gate)"
 		end
@@ -263,7 +264,7 @@ function getDoorSound(door, devotionSlot)
 	end
 end
 
-function TryOpenSimplifiedInventory(screen, button) 
+function rom.game.BlindAccessTryOpenSimplifiedInventory(screen, button) 
 	if not IsScreenOpen("BlindAccesibilityInventoryMenu") then
 		local currentResources = {}
 		for k,resourceName in pairs(screen.ItemCategories[screen.ActiveCategoryIndex]) do
@@ -297,7 +298,7 @@ function OpenSimplifiedInventory(resources)
 	components.ShopBackgroundDim = CreateScreenComponent({ Name = "rectangle01", Group = "Menu_UI" })
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Menu_UI_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
-	components.CloseButton.OnPressedFunctionName = "CloseInventoryMenu"
+	components.CloseButton.OnPressedFunctionName = "BlindAccessCloseInventoryMenu"
 	components.CloseButton.ControlHotkeys = { "Cancel", }
 	components.CloseButton.MouseControlHotkeys  = { "Cancel", "Inventory", }
 
@@ -364,7 +365,7 @@ function CreateInventoryButtons(screen, resources)
 	end
 end
 
-function CloseInventoryMenu(screen, button)
+function rom.game.BlindAccessCloseInventoryMenu(screen, button)
 	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = nil })
 	OnScreenCloseStarted(screen)
 	CloseScreen(GetAllIds(screen.Components), 0.15)
@@ -613,7 +614,7 @@ function OpenRewardMenu(rewards)
 	components.ShopBackgroundDim = CreateScreenComponent({ Name = "rectangle01", Group = "Menu_UI" })
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Menu_UI_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
-	components.CloseButton.OnPressedFunctionName = "CloseRewardMenu"
+	components.CloseButton.OnPressedFunctionName = "BlindAccessCloseRewardMenu"
 	components.CloseButton.ControlHotkeys = { "Cancel", }
 	components.CloseButton.MouseControlHotkeys  = { "Cancel", }
 
@@ -710,11 +711,11 @@ function CreateRewardButtons(screen, rewards)
 
 			components[buttonKey].index = k
 			components[buttonKey].reward = {ObjectId = reward.Id}
-			components[buttonKey].OnPressedFunctionName = "GoToReward"
+			components[buttonKey].OnPressedFunctionName = "BlindAccessGoToReward"
 			if reward.Args ~= nil and reward.Args.ForceLootName then
-				displayText = reward.Args.ForceLootName:gsub("Upgrade", ""):gsub("Drop", "")
+				displayText = reward.Args.ForceLootName--:gsub("Upgrade", ""):gsub("Drop", "")
 			end
-			displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
+			-- displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
 			--displayText = (displayText .. GetWeaponDisplayConditions(reward.Name)) or displayText
 			CreateTextBox({
 				Id = components[buttonKey].Id,
@@ -751,15 +752,15 @@ function CreateRewardButtons(screen, rewards)
 			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
 			components[buttonKey].index = k
 			components[buttonKey].reward = reward
-			components[buttonKey].OnPressedFunctionName = "GoToReward"
+			components[buttonKey].OnPressedFunctionName = "BlindAccessGoToReward"
 			if reward.Args ~= nil and reward.Args.ForceLootName then
-				displayText = reward.Args.ForceLootName:gsub("Upgrade", ""):gsub("Drop", "")
+				displayText = reward.Args.ForceLootName--:gsub("Upgrade", ""):gsub("Drop", "")
 			end
-			displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
+			-- displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
 			--displayText = (displayText .. GetWeaponDisplayConditions(reward.Name)) or displayText
 			CreateTextBox({
 				Id = components[buttonKey].Id,
-				Text = displayText,
+				Text = GetDisplayName({Text=displayText, IgnoreSpecialFormatting=true}),
 				FontSize = 24,
 				OffsetX = -200,
 				OffsetY = 0,
@@ -786,9 +787,9 @@ end
 -- 	--Not needed if using the thunderstore version of TOLk compatability
 -- end
 
-function GoToReward(screen, button)
+function rom.game.BlindAccessGoToReward(screen, button)
 	PlaySound({ Name = "/SFX/Menu Sounds/ContractorItemPurchase" })
-	CloseRewardMenu(screen, button)
+	rom.game.BlindAccessCloseRewardMenu(screen, button)
 	local RewardID = nil
 	RewardID = button.reward.ObjectId
 	destinationOffsetX = button.reward.DestinationOffsetX or 0
@@ -804,7 +805,7 @@ function GoToReward(screen, button)
 	end
 end
 
-function CloseRewardMenu(screen, button)
+function rom.game.BlindAccessCloseRewardMenu(screen, button)
 	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = nil })
 	OnScreenCloseStarted(screen)
 	CloseScreen(GetAllIds(screen.Components), 0.15)
@@ -842,7 +843,7 @@ function OpenStoreMenu(items)
 
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Asses_UI_Store_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
-	components.CloseButton.OnPressedFunctionName = "CloseItemScreen"
+	components.CloseButton.OnPressedFunctionName = "BlindAccessCloseItemScreen"
 	components.CloseButton.ControlHotkeys = { "Cancel", }
 	components.CloseButton.MouseControlHotkeys  = { "Cancel", }
 
@@ -915,7 +916,7 @@ function CreateItemButtons(screen, items)
 				})
 			components[buttonKey].index = k
 			components[buttonKey].item = item
-			components[buttonKey].OnPressedFunctionName = "MoveToItem"
+			components[buttonKey].OnPressedFunctionName = "BlindAccessMoveToItem"
 			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
 			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
 
@@ -963,16 +964,16 @@ function CreateItemButtons(screen, items)
 	end
 end
 
-function MoveToItem(screen, button)
+function rom.game.BlindAccessMoveToItem(screen, button)
 	PlaySound({ Name = "/SFX/Menu Sounds/ContractorItemPurchase" })
-	CloseItemScreen(screen, button)
+	rom.game.BlindAccessCloseItemScreen(screen, button)
 	local ItemID = button.item.ObjectId
 	if ItemID ~= nil then
 		Teleport({ Id = CurrentRun.Hero.ObjectId, DestinationId = ItemID })
 	end
 end
 
-function CloseItemScreen(screen, button)
+function rom.game.BlindAccessCloseItemScreen(screen, button)
 	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = nil })
 	OnScreenCloseStarted(screen)
 	CloseScreen(GetAllIds(screen.Components), 0.15)
@@ -1138,7 +1139,7 @@ function OnCodexPress()
 		if string.find(curMap, "Hub_PreRun") then
 			rewardsTable = ProcessTable(MapState.WeaponKits)
 		else
-			rewardsTable = ProcessTable(modutil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
+			rewardsTable = ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
 			local currentRoom = CurrentRun.CurrentRoom
 			if currentRoom.HarvestPointIds ~= nil and #currentRoom.HarvestPointIds > 0 then
 				for k, point in pairs(currentRoom.HarvestPointIds) do
@@ -1189,7 +1190,7 @@ function OnAdvancedTooltipPress()
 
 	local rewardsTable = {}
 	if CurrentRun.Hero.IsDead and not IsScreenOpen("InventoryScreen") and not IsScreenOpen("BlindAccesibilityInventoryMenu") then
-		rewardsTable = ProcessTable(modutil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
+		rewardsTable = ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
 		if TableLength(rewardsTable) > 0 then
 			if not IsEmpty(ActiveScreens.TraitTrayScreen) then
 					thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
@@ -1207,13 +1208,13 @@ function wrap_GetDisplayName(baseFunc, args)
 	return v
 end
 
-function wrap_TraitTrayScreenShowCategory(baseFunc, ...)
+function wrap_TraitTrayScreenShowCategory(baseFunc, screen, categoryIndex, args)
 	if not screen.Closing then
-		return baseFunc(...)
+		return baseFunc(screen, categoryIndex, args)
 	end
 end
 
-function override_SpawnSotreItemInWorld(itemData, kitId)
+function override_SpawnStoreItemInWorld(itemData, kitId)
     local spawnedItem = nil
 	if itemData.Name == "WeaponUpgradeDrop" then
 		spawnedItem = CreateWeaponLoot({
@@ -1314,7 +1315,7 @@ function wrap_UpdateMetaUpgradeCardCreateTextBox(baseFunc, screen, row, column, 
         CreateArcanaSpeechText(button, args, {Row=row, Column=column})
         return nil
     else
-        return baseFunc(args, ...)
+        return baseFunc(args, screen, row, column, args)
     end
 end
 
@@ -1371,4 +1372,14 @@ function wrap_OpenGraspLimitAcreen()
         wait(0.02)
         TeleportCursor({DestinationId=components[buttonKey].Id})
     end)
+end
+
+
+
+function sjson_Chronos(data) 
+	for k,v in ipairs(data.Projectiles) do
+			if v.Name == "ChronosCircle" or v.Name == "ChronosCircleInverted" then
+				v.Damage = 50
+			end
+	end
 end

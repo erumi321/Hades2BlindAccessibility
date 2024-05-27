@@ -1,5 +1,5 @@
 # Hades2BlindAccessibility
-Adds blind / low visibility accessibility features to Hades 2. Current features include:
+Adds blind / low visibility accessibility features to Hades 2. Adapted from PonyWarrior's [base code](https://github.com/PonyWarrior/Hades2BlindAccessibility). Current features include:
 * A menu to teleport the player to key points within the crossroads
     * To access press the key to open boon information while in the crossroads, default controls are:
         * Gamepad: D-pad left
@@ -17,7 +17,7 @@ Adds blind / low visibility accessibility features to Hades 2. Current features 
     * To access open the inventory then press the inventory button again, default controls are:
         * Gamepad: D-pad right then D-pad right
         * Keyboard: I then I
-* Final Boss's instant kill move instead deals 50 damage
+* Final Boss's instant kill move instead deals 50 damage (Original creation by PonyWarrior)
 * The Arcana Card's descriptions, prices, and whether they are turned on or off are read in the shrine's menu
 
 # TODO

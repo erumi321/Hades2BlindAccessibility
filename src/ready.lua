@@ -7,7 +7,7 @@
 -- 	so you will most likely want to have it reference
 --	values and functions later defined in `reload.lua`.
 
-if not config.Enabled then return end
+if not config.enabled then return end
 
 --[[
 Mod: DoorMenu
@@ -18,7 +18,7 @@ Intended as an accessibility mod. Places all doors in a menu, allowing the playe
 --]]
 
 local function setupData()
-	modutil.Table.Merge(ScreenData, {
+	ModUtil.Table.Merge(ScreenData, {
 		BlindAccessibilityRewardMenu = {
 			Components = {},
 			BlockPause=true,
@@ -49,7 +49,7 @@ local function setupData()
 		{
 			OnMouseOverFunctionName = "MouseOverContextualAction",
 			OnMouseOffFunctionName = "MouseOffContextualAction",
-			OnPressedFunctionName = "BlindAccess.TryOpenSimplifiedInventory",
+			OnPressedFunctionName = "BlindAccessTryOpenSimplifiedInventory",
 			ControlHotkeys = { "Inventory", },
 			MouseControlHotkeys  = { "Inventory" },
 		},
@@ -77,16 +77,16 @@ OnControlPressed { "AdvancedTooltip", function(triggerArgs)
 	OnAdvancedTooltipPress()
 end }
 
-modutil.mod.Path.Wrap("TraitTrayScreenShowCategory", function(baseFunc, ...)
-	wrap_TraitTrayScreenShowCategory(baseFunc, ...)
+modutil.mod.Path.Wrap("TraitTrayScreenShowCategory", function(baseFunc, screen, categoryIndex, args)
+	return wrap_TraitTrayScreenShowCategory(baseFunc, screen, categoryIndex, args)
 end)
 
 modutil.mod.Path.Wrap("GetDisplayName", function(baseFunc, args)
-	wrap_GetDisplayName(baseFunc, args)
+	return wrap_GetDisplayName(baseFunc, args)
 end)
 
 modutil.mod.Path.Override("SpawnStoreItemInWorld", function(itemData, kitId)
-	override_SpawnSotreItemInWorld(itemData, kitId)
+	return override_SpawnStoreItemInWorld(itemData, kitId)
 end)
 
 --arcana menu button speaking
@@ -114,6 +114,12 @@ modutil.mod.Path.Context.Wrap("OpenGraspLimitScreen", function(parentScreen)
 
 		return baseFunc(...)
 	end)
+end)
+
+local projectilePath = rom.path.combine(rom.paths.Content, 'Game/Projectiles/EnemyProjectiles.sjson')
+
+sjson.hook(projectilePath, function(data)
+	return sjson_Chronos(data)
 end)
 
 setupData()
