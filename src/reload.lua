@@ -226,7 +226,7 @@ function CreateAssesDoorButtons(screen, doors)
 			})
 			if isFirstButton then
 				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
-				wait(0.02)
+				wait(0.2)
 				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
 				isFirstButton = false
 			end
@@ -382,9 +382,9 @@ function CreateInventoryButtons(screen, resources)
 			Justification = "Left",
 		})
 		if isFirstButton then
-			TeleportCursor({ OffsetX = startX + 300, OffsetY = curY })
-			wait(0.02)
-			TeleportCursor({ OffsetX = startX, OffsetY = curY })
+			TeleportCursor({ OffsetX = curX + 300, OffsetY = curY })
+			wait(0.2)
+			TeleportCursor({ OffsetX = curX, OffsetY = curY })
 			isFirstButton = false
 		end
 		curY = curY + yIncrement
@@ -789,7 +789,7 @@ function CreateRewardButtons(screen, rewards)
 			})
 			if isFirstButton then
 				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
-				wait(0.02)
+				wait(0.2)
 				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
 				isFirstButton = false
 			end
@@ -832,7 +832,7 @@ function CreateRewardButtons(screen, rewards)
 			})
 			if isFirstButton then
 				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
-				wait(0.02)
+				wait(0.2)
 				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
 				isFirstButton = false
 			end
@@ -1056,7 +1056,7 @@ function CreateItemButtons(screen, items)
 			})
 			if isFirstButton then
 				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
-				wait(0.02)
+				wait(0.2)
 				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
 				isFirstButton = false
 			end
