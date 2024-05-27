@@ -382,9 +382,9 @@ function CreateInventoryButtons(screen, resources)
 			Justification = "Left",
 		})
 		if isFirstButton then
-			TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
+			TeleportCursor({ OffsetX = startX + 300, OffsetY = curY })
 			wait(0.02)
-			TeleportCursor({ OffsetX = xPos, OffsetY = curY })
+			TeleportCursor({ OffsetX = startX, OffsetY = curY })
 			isFirstButton = false
 		end
 		curY = curY + yIncrement
