@@ -23,4 +23,17 @@ Adds blind / low visibility accessibility features to Hades 2. Adapted from Pony
 * The Arcana Card's descriptions, prices, and whether they are turned on or off are read in the shrine's menu
 
 # TODO
-* Conversation text
+* flashback
+* cauldron
+* broker
+* gift menu
+* planting menu
+* tablet minigame
+* shrine of hermes menu
+* change inventory reading system to work better with vanilla inventory behaviors
+* subtitles
+* bug fixes
+    * Shop not showing gatherable resources
+    * Door menu not always opening
+    * Pom of power menu / single button menus not reading
+    * Oceanus sealed doors

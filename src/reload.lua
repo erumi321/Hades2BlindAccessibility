@@ -17,9 +17,14 @@ function OnInventoryPress()
 			return
 		end
 	end
-	if CurrentRun.CurrentRoom.ExitsUnlocked and IsScreenOpen("TraitTrayScreen") then
-		TraitTrayScreenClose(ActiveScreens.TraitTrayScreen)
-		OpenAssesDoorShowerMenu(CollapseTable(MapState.OfferedExitDoors))
+	if IsScreenOpen("TraitTrayScreen") then
+		if CurrentRun.CurrentRoom.ExitsUnlocked then
+			TraitTrayScreenClose(ActiveScreens.TraitTrayScreen)
+			OpenAssesDoorShowerMenu(CollapseTable(MapState.OfferedExitDoors))
+		elseif MapState.ShipWheels then
+			TraitTrayScreenClose(ActiveScreens.TraitTrayScreen)
+			OpenAssesDoorShowerMenu(CollapseTable(MapState.ShipWheels))
+		end
 	end
 end
 
@@ -73,13 +78,30 @@ function GetMapName()
 end
 
 function CreateAssesDoorButtons(screen, doors)
-	local xPos = 960
-	local startY = 180
+	local startX = 960
+	local startY = 150
 	local yIncrement = 75
+	local curX = startX
 	local curY = startY
 	local components = screen.Components
 	local isFirstButton = true
 	
+	local inCityHub = GetMapName() == "N_Hub"
+	local inCityRoom = GetMapName():find("N_") == 1 and not inCityHub
+	local inShip = GetMapName():find("O_") == 1
+	local inHouse = GetMapName():find("I_") == 1
+	if inCityHub then
+		curX = 500
+		local doorSortValue = function(door)
+			local v = GetDisplayName({Text=getDoorSound(door, false):gsub("Room", ""), IgnoreSpecialFormatting=true})
+			if v:find(" ") == 1 then
+				v = v:sub(2)
+			end
+			return v
+		end
+		table.sort(doors, function(a,b) return doorSortValue(a) < doorSortValue(b) end)
+	end
+
 	local healthKey = "AssesResourceMenuInformationHealth"
 	components[healthKey] =
 	CreateScreenComponent({
@@ -157,7 +179,7 @@ function CreateAssesDoorButtons(screen, doors)
 		ShadowOffset = { 0, 2 },
 		Justification = "Left",
 	})
-	curY = curY + yIncrement
+	curY = curY + yIncrement + 30
 	for k, door in pairs(doors) do
 		local showDoor = true
 		if string.find(GetMapName(), "D_Hub") then
@@ -166,55 +188,91 @@ function CreateAssesDoorButtons(screen, doors)
 			end
 		end
 		if showDoor then
-			local displayText = ""
-			if door.Room.ChosenRewardType == "Devotion" then
-				displayText = displayText .. getDoorSound(door, false) .. " "
-				displayText = displayText .. getDoorSound(door, true)
-			else
-				displayText = displayText .. getDoorSound(door, false)
-			end
-			displayText = GetDisplayName({Text=displayText:gsub("Room", ""), IgnoreSpecialFormatting=true})
 
-			local args = { RoomData = door.Room }
-			local rewardOverrides = args.RoomData.RewardOverrides or {}
-			local encounterData = args.RoomData.Encounter or {}
-			local previewIcon = rewardOverrides.RewardPreviewIcon or encounterData.RewardPreviewIcon or
-				args.RoomData.RewardPreviewIcon
-			if previewIcon ~= nil and string.find(previewIcon, "Elite") then
-				if previewIcon == "RoomElitePreview4" then
-					displayText = displayText .. " (Boss)"
-				elseif previewIcon == "RoomElitePreview2" then
-					displayText = displayText .. " (Mini-Boss)"
-				elseif previewIcon == "RoomElitePreview3" then
-					if not string.find(displayText, "(Infernal Gate)") then
-						displayText = displayText .. " (Infernal Gate)"
+			local displayText = ""
+			if inShip then
+				if door.Name == "ShipsExitDoor" or door.Name == "ShipsPostBossDoor" then
+					if door.RewardPreviewAnimName == "ShopPreview" then
+						displayText = GetDisplayName({Text="UseStore", IgnoreSpecialFormatting=true})
+					else
+						displayText = displayText .. GetDisplayName({Text=getDoorSound(door, false), IgnoreSpecialFormatting=true})
 					end
 				else
-					displayText = displayText .. " (Elite)"
+					displayText = GetDisplayName({Text=door.ChosenRewardType, IgnoreSpecialFormatting=true})
+				end
+			elseif inCityRoom then
+				if door.Name == "EphyraExitDoorReturn" or door.ReturnToPreviousRoomName == "N_Hub" then
+					displayText = GetDisplayName({Text="BiomeN", IgnoreSpecialFormatting=true})
+				else
+					displayText = GetDisplayName({Text="RoomAlt", IgnoreSpecialFormatting=true})
+				end
+			else
+				if door.Room.ChosenRewardType == "Devotion" then
+					displayText = displayText .. GetDisplayName({Text=getDoorSound(door, false), IgnoreSpecialFormatting=true}) .. " "
+					displayText = displayText .. GetDisplayName({Text=getDoorSound(door, true), IgnoreSpecialFormatting=true})
+				else
+					displayText = displayText .. GetDisplayName({Text=getDoorSound(door, false), IgnoreSpecialFormatting=true})
+				end
+
+				if door.Name == "FieldsExitDoor" and door.Room.CageRewards then
+					displayText = ""
+					for k,reward in pairs(door.Room.CageRewards) do
+						displayText = displayText .. GetDisplayName({Text=reward.RewardType:gsub("Room", ""), IgnoreSpecialFormatting=true}) .. ", "
+					end
+					displayText = displayText:sub(0, -3)
+				else
+					if displayText == "ElementalBoost" then
+						displayText = "Boon_Infusion"
+					end
+					displayText = GetDisplayName({Text=displayText:gsub("Room", ""):gsub("Drop", ""), IgnoreSpecialFormatting=true})
+				end
+
+				if displayText == "ClockworkGoal" and CurrentRun.RemainingClockworkGoals then
+					displayText = GetDisplayName({Text="ChamberMoverUsed", IgnoreSpecialFormatting=true}) .. " " .. CurrentRun.RemainingClockworkGoals
+				end
+
+
+				local args = { RoomData = door.Room }
+				local rewardOverrides = args.RoomData.RewardOverrides or {}
+				local encounterData = args.RoomData.Encounter or {}
+				local previewIcon = rewardOverrides.RewardPreviewIcon or encounterData.RewardPreviewIcon or
+					args.RoomData.RewardPreviewIcon
+				if previewIcon ~= nil and string.find(previewIcon, "Elite") then
+					if previewIcon == "RoomElitePreview4" then
+						displayText = displayText .. " (Boss)"
+					elseif previewIcon == "RoomElitePreview2" then
+						displayText = displayText .. " (Mini-Boss)"
+					elseif previewIcon == "RoomElitePreview3" then
+						if not string.find(displayText, "(Infernal Gate)") then
+							displayText = displayText .. " (Infernal Gate)"
+						end
+					else
+						displayText = displayText .. " (Elite)"
+					end
 				end
 			end
-			local buttonKey = "AssesResourceMenuButton" .. k .. displayText
+			local buttonKey = "AssesResourceMenuButton" .. k
 
 			components[buttonKey] =
 				CreateScreenComponent({
 					Name = "ButtonDefault",
 					Group = "Asses_UI",
 					Scale = 0.8,
-					X = xPos,
+					X = curX,
 					Y = curY
 				})
-				SetScaleX({Id = components[buttonKey].Id, Fraction=2})
+				SetScaleX({Id = components[buttonKey].Id, Fraction=1})
 			components[buttonKey].OnPressedFunctionName = "BlindAccessAssesDoorMenuSoundSet"
+			components[buttonKey].door = door
 			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
 			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
-			components[buttonKey].door = door
 			--Attach({ Id = components[buttonKey].Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = xPos, OffsetY = curY })
 
 			CreateTextBox({
 				Id = components[buttonKey].Id,
 				Text = displayText,
 				FontSize = 24,
-				OffsetX = -90,
+				OffsetX = 0,
 				OffsetY = 0,
 				Color = Color.White,
 				Font = "P22UndergroundSCMedium",
@@ -222,15 +280,20 @@ function CreateAssesDoorButtons(screen, doors)
 				ShadowBlur = 0,
 				ShadowColor = { 0, 0, 0, 1 },
 				ShadowOffset = { 0, 2 },
-				Justification = "Left",
+				Justification = "Center",
 			})
+
 			if isFirstButton then
-				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
+				TeleportCursor({ OffsetX = curX + 300, OffsetY = curY })
 				wait(0.2)
-				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
+				TeleportCursor({ OffsetX = curX, OffsetY = curY })
 				isFirstButton = false
 			end
 			curY = curY + yIncrement
+			if inCityHub and curY > 900 then
+				curY = startY + yIncrement * 3 + 30
+				curX = curX + 250
+			end
 		end
 	end
 end
@@ -251,21 +314,29 @@ function rom.game.BlindAccessAssesDoorMenuSoundSet(screen, button)
 end
 
 function doDefaultSound(door)
-	Teleport({ Id = CurrentRun.Hero.ObjectId, DestinationId = door.ObjectId })
+	local offsetX = 0
+	local offsetY = 0
+	if door.Name == "ChronosBossDoor" then
+		offsetX = 200
+		offsetY = -140
+	end
+	Teleport({ Id = CurrentRun.Hero.ObjectId, DestinationId = door.ObjectId, OffsetX = offsetX, OffsetY = offsetY})
 end
 
 function getDoorSound(door, devotionSlot)
 	local room = door.Room
-	if door.Room.Name == "FinalBossExitDoor" or door.Room.Name == "E_Intro" then
+	if GetMapName():find("O_") == 1 then
+		return "MetaUpgrade_UpgradesAvailable_Close"
+	elseif door.Room.Name == "FinalBossExitDoor" or door.Room.Name == "E_Intro" then
 		return "Greece"
 	elseif room.NextRoomSet and room.Name:find("D_Boss", 1, true) ~= 1 then
 		return "Stairway"
 	elseif room.Name:find("_Intro", 1, true) ~= nil then
 		return "Next Biome"
 	elseif HasHeroTraitValue("HiddenRoomReward") then
-		return "Enshrouded"
+		return "ChaosHiddenRoomRewardCurse"
 	elseif room.ChosenRewardType == nil then
-		return "Enshrouded"
+		return "ChaosHiddenRoomRewardCurse"
 	elseif room.ChosenRewardType == "Boon" and room.ForceLootName then
 		if LootData[room.ForceLootName].DoorIcon ~= nil then
 			local godName = LootData[room.ForceLootName].DoorIcon
@@ -471,8 +542,8 @@ local mapPointsOfInterest = {
 	}
 }
 
-function ProcessTable(objects)
-	local t = InitializeObjectList(objects)
+function ProcessTable(objects, blockIds)
+	local t = InitializeObjectList(objects, blockIds)
 
 	local map = GetMapName()
 	for map_name, map_data in pairs(mapPointsOfInterest) do
@@ -499,17 +570,20 @@ function ProcessTable(objects)
 	if CurrentRun and CurrentRun.CurrentRoom and CurrentRun.CurrentRoom.ExitsUnlocked then
 		t = AddTrove(t)
 		t = AddWell(t)
+		t = AddSurfaceShop(t)
 		t = AddPool(t)
 	end
 
 	return t
 end
 
-function InitializeObjectList(objects)
+function InitializeObjectList(objects, blockIds)
 	local initTable = CollapseTableOrderedByKeys(objects) or {}
 	local copy = {}
 	for i, v in ipairs(initTable) do
-		table.insert(copy, { ["ObjectId"] = v.ObjectId, ["Name"] = v.Name })
+		if blockIds == nil or blockIds[v.ObjectId] == nil then
+			table.insert(copy, { ["ObjectId"] = v.ObjectId, ["Name"] = v.Name })
+		end
 	end
 	return copy
 end
@@ -525,6 +599,23 @@ function AddTrove(objects)
 		["Name"] = "Infernal Trove (" ..
 			(GetDisplayName({Text = CurrentRun.CurrentRoom.ChallengeSwitch.RewardType or CurrentRun.CurrentRoom.ChallengeSwitch.RewardType, IgnoreSpecialFormatting=true})) ..
 			")",
+	}
+	if not ObjectAlreadyPresent(switch, copy) then
+		table.insert(copy, switch)
+	end
+	return copy
+end
+
+function AddSurfaceShop(objects)
+	if not CurrentRun.CurrentRoom.SurfaceShop then
+		return objects
+	end
+
+	local NV = CurrentRun.CurrentRoom.SurfaceShop
+	local copy = ShallowCopyTable(objects)
+	local switch = {
+		["ObjectId"] = CurrentRun.CurrentRoom.SurfaceShop.ObjectId,
+		["Name"] = "SurfaceShop_Title"
 	}
 	if not ObjectAlreadyPresent(switch, copy) then
 		table.insert(copy, switch)
@@ -670,7 +761,7 @@ function CreateRewardButtons(screen, rewards)
 		components[healthKey] =
 		CreateScreenComponent({
 			Name = "ButtonDefault",
-			Group = "Asses_UI",
+			Group = "Menu_UI_Rewards",
 			Scale = 0.8,
 			X = 960,
 			Y = curY
@@ -685,7 +776,7 @@ function CreateRewardButtons(screen, rewards)
 			OffsetY = 0,
 			Color = Color.White,
 			Font = "P22UndergroundSCMedium",
-			Group = "Asses_UI",
+			Group = "Menu_UI_Rewards",
 			ShadowBlur = 0,
 			ShadowColor = { 0, 0, 0, 1 },
 			ShadowOffset = { 0, 2 },
@@ -697,7 +788,7 @@ function CreateRewardButtons(screen, rewards)
 		components[armorKey] =
 		CreateScreenComponent({
 			Name = "ButtonDefault",
-			Group = "Asses_UI",
+			Group = "Menu_UI_Rewards",
 			Scale = 0.8,
 			X = 960,
 			Y = curY
@@ -711,7 +802,7 @@ function CreateRewardButtons(screen, rewards)
 			OffsetY = 0,
 			Color = Color.White,
 			Font = "P22UndergroundSCMedium",
-			Group = "Asses_UI",
+			Group = "Menu_UI_Rewards",
 			ShadowBlur = 0,
 			ShadowColor = { 0, 0, 0, 1 },
 			ShadowOffset = { 0, 2 },
@@ -723,7 +814,7 @@ function CreateRewardButtons(screen, rewards)
 		components[goldKey] =
 		CreateScreenComponent({
 			Name = "ButtonDefault",
-			Group = "Asses_UI",
+			Group = "Menu_UI_Rewards",
 			Scale = 0.8,
 			X = 960,
 			Y = curY
@@ -737,7 +828,7 @@ function CreateRewardButtons(screen, rewards)
 			-- OffsetY = yIncrement * 2,
 			Color = Color.White,
 			Font = "P22UndergroundSCMedium",
-			Group = "Asses_UI",
+			Group = "Menu_UI_Rewards",
 			ShadowBlur = 0,
 			ShadowColor = { 0, 0, 0, 1 },
 			ShadowOffset = { 0, 2 },
@@ -749,95 +840,78 @@ function CreateRewardButtons(screen, rewards)
 		curY = startY
 	end
 	for k, reward in pairs(rewards) do
-		if reward.IsResourceHarvest then
-			local displayText = reward.Type
-			local buttonKey = "RewardMenuButton" .. k .. displayText
-			components[buttonKey] =
-				CreateScreenComponent({
-					Name = "ButtonDefault",
-					Group = "Menu_UI_Rewards",
-					Scale = 0.8,
-					X = xPos,
-					Y = curY
-				})
-				SetScaleX({Id = components[buttonKey].Id, Fraction=4})
-			
-			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
-			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
+		local displayText = reward.Name
+		local buttonKey = "RewardMenuButton" .. k .. displayText
+		components[buttonKey] =
+			CreateScreenComponent({
+				Name = "ButtonDefault",
+				Group = "Menu_UI_Rewards",
+				Scale = 0.8,
+				X = xPos,
+				Y = curY
+			})
 
-			components[buttonKey].index = k
-			components[buttonKey].reward = {ObjectId = reward.Id}
-			components[buttonKey].OnPressedFunctionName = "BlindAccessGoToReward"
-			if reward.Args ~= nil and reward.Args.ForceLootName then
-				displayText = reward.Args.ForceLootName--:gsub("Upgrade", ""):gsub("Drop", "")
-			end
-			-- displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
-			--displayText = (displayText .. GetWeaponDisplayConditions(reward.Name)) or displayText
-			CreateTextBox({
-				Id = components[buttonKey].Id,
-				Text = displayText,
-				FontSize = 24,
-				OffsetX = -100,
-				OffsetY = 0,
-				Color = Color.White,
-				Font = "P22UndergroundSCMedium",
-				Group = "Menu_UI_Rewards",
-				ShadowBlur = 0,
-				ShadowColor = { 0, 0, 0, 1 },
-				ShadowOffset = { 0, 2 },
-				Justification = "Left",
-			})
-			if isFirstButton then
-				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
-				wait(0.2)
-				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
-				isFirstButton = false
-			end
-			curY = curY + yIncrement
-		else
-			local displayText = reward.Name
-			local buttonKey = "RewardMenuButton" .. k .. displayText
-			components[buttonKey] =
-				CreateScreenComponent({
-					Name = "ButtonDefault",
-					Group = "Menu_UI_Rewards",
-					Scale = 0.8,
-					X = xPos,
-					Y = curY
-				})
-				SetScaleX({Id = components[buttonKey].Id, Fraction=4})
-			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
-			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
-			components[buttonKey].index = k
-			components[buttonKey].reward = reward
-			components[buttonKey].OnPressedFunctionName = "BlindAccessGoToReward"
-			if reward.Args ~= nil and reward.Args.ForceLootName then
-				displayText = reward.Args.ForceLootName--:gsub("Upgrade", ""):gsub("Drop", "")
-			end
-			-- displayText = displayText:gsub("Drop", ""):gsub("StoreReward", "") or displayText
-			--displayText = (displayText .. GetWeaponDisplayConditions(reward.Name)) or displayText
-			CreateTextBox({
-				Id = components[buttonKey].Id,
-				Text = GetDisplayName({Text=displayText, IgnoreSpecialFormatting=true}),
-				FontSize = 24,
-				OffsetX = -200,
-				OffsetY = 0,
-				Color = Color.White,
-				Font = "P22UndergroundSCMedium",
-				Group = "Menu_UI_Rewards",
-				ShadowBlur = 0,
-				ShadowColor = { 0, 0, 0, 1 },
-				ShadowOffset = { 0, 2 },
-				Justification = "Left",
-			})
-			if isFirstButton then
-				TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
-				wait(0.2)
-				TeleportCursor({ OffsetX = xPos, OffsetY = curY })
-				isFirstButton = false
-			end
-			curY = curY + yIncrement
+			SetScaleX({Id = components[buttonKey].Id, Fraction=4})
+		AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+		-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
+		components[buttonKey].index = k
+		components[buttonKey].reward = reward
+		components[buttonKey].OnPressedFunctionName = "BlindAccessGoToReward"
+		if reward.Args ~= nil and reward.Args.ForceLootName then
+			displayText = reward.Args.ForceLootName--:gsub("Upgrade", ""):gsub("Drop", "")
 		end
+		if displayText:find("Drop") == #displayText - 3 then
+			displayText = displayText:sub(1, -5)
+		end
+		displayText = GetDisplayName({Text=displayText, IgnoreSpecialFormatting=true}) .. " " --we need this space for Echo, NPC_Echo_01 -> "Echo" -> "Blitz" since "Echo" is an id
+		if reward.IsOptionalReward then
+			displayText = displayText .. "(" .. GetDisplayName({Text="MetaRewardAlt", IgnoreSpecialFormatting=true}) .. ")"
+		end
+		if displayText == "RandomLoot " then
+			if LootObjects[reward.ObjectId] ~= nil then
+				displayText = LootObjects[reward.ObjectId].Name
+			end
+		end
+		CreateTextBox({
+			Id = components[buttonKey].Id,
+			Text = displayText,
+			FontSize = 24,
+			OffsetX = -200,
+			OffsetY = 0,
+			Color = Color.White,
+			Font = "P22UndergroundSCMedium",
+			Group = "Menu_UI_Rewards",
+			ShadowBlur = 0,
+			ShadowColor = { 0, 0, 0, 1 },
+			ShadowOffset = { 0, 2 },
+			Justification = "Left",
+		})
+
+
+		if reward.IsShopItem then
+			CreateTextBox({
+				Id = components[buttonKey].Id,
+				Text = reward.ResourceCosts.Money .. " Gold",
+				FontSize = 24,
+				OffsetX = -520,
+				OffsetY = 30,
+				Color = Color.White,
+				Font = "P22UndergroundSCMedium",
+				Group = "Asses_UI_Store",
+				ShadowBlur = 0,
+				ShadowColor = { 0, 0, 0, 1 },
+				ShadowOffset = { 0, 2 },
+				Justification = "Left",
+			})
+		end
+
+		if isFirstButton then
+			TeleportCursor({ OffsetX = xPos + 300, OffsetY = curY })
+			wait(0.2)
+			TeleportCursor({ OffsetX = xPos, OffsetY = curY })
+			isFirstButton = false
+		end
+		curY = curY + yIncrement
 	end
 end
 
@@ -1222,45 +1296,80 @@ end
 
 function OnCodexPress()
 	if IsScreenOpen("TraitTrayScreen") then
-		local rewardsTable = {}
-		local curMap = GetMapName()
-
-		--shop menu
-		if string.find(curMap, "Shop") or string.find(curMap, "PreBoss") or string.find(curMap, "D_Hub") then
-			if CurrentRun.CurrentRoom.Store == nil then
-				return
-			elseif NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) == 0 then
+		for k,_ in pairs(ActiveScreens) do
+			if k ~= "TraitTrayScreen" then
 				return
 			end
-			thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
-			OpenStoreMenu(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems)
-			return
 		end
+		local rewardsTable = {}
+		local curMap = GetMapName()
 
 		if string.find(curMap, "Hub_PreRun") then
 			rewardsTable = ProcessTable(MapState.WeaponKits)
 		else
-			rewardsTable = ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
-			local currentRoom = CurrentRun.CurrentRoom
-			if currentRoom.HarvestPointIds ~= nil and #currentRoom.HarvestPointIds > 0 then
-				for k, point in pairs(currentRoom.HarvestPointIds) do
-					if IsUseable({Id = point.Id}) then
-						table.insert(rewardsTable, {IsResourceHarvest=true, Type="Herb", Id=point.Id})
+			local blockedIds = {}
+			if string.find(curMap, "Shop") or string.find(curMap, "PreBoss") or string.find(curMap, "D_Hub") then
+				if CurrentRun.CurrentRoom.Store ~= nil then
+					if NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) ~= 0 then
+						if CurrentRun.CurrentRoom.Store.SpawnedStoreItems then
+							for k,v in ipairs(CurrentRun.CurrentRoom.Store.SpawnedStoreItems) do
+								table.insert(rewardsTable, {IsShopItem=true, Name=v.Name, ObjectId=v.ObjectId, ResourceCosts = v.ResourceCosts})
+								blockedIds[v.ObjectId] = true
+							end
+						end
+						if MapState.SurfaceShopItems then
+							for k,v in ipairs(MapState.SurfaceShopItems) do
+								table.insert(rewardsTable, {IsShopItem=true, Name=v.Name, ObjectId=v.ObjectId, ResourceCosts = v.ResourceCosts})
+								blockedIds[v.ObjectId] = true
+							end
+						end
 					end
 				end
 			end
-			if currentRoom.ShovelPointId ~= nil and IsUseable({Id = currentRoom.ShovelPointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Shovel", Id=currentRoom.ShovelPointId})
+			local t = ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects), blockedIds)
+			for k,v in pairs(t) do
+				table.insert(rewardsTable, v)
+			end
+			local currentRoom = CurrentRun.CurrentRoom
+			if currentRoom.FishingPointId ~= nil and IsUseable({Id = currentRoom.FishingPointId}) then
+				table.insert(rewardsTable, {IsResourceHarvest=true, Name="Fish", ObjectId=currentRoom.FishingPointId})
+			end
+			if currentRoom.HarvestPointIds ~= nil and #currentRoom.HarvestPointIds > 0 then
+				for k, point in pairs(currentRoom.HarvestPointIds) do
+					if IsUseable({Id = point.Id}) then
+						table.insert(rewardsTable, {IsResourceHarvest=true, Name="Herb", ObjectId=point.Id})
+					end
+				end
 			end
 			if currentRoom.PickaxePointId ~= nil and IsUseable({Id = currentRoom.PickaxePointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Pickaxe", Id=currentRoom.PickaxePointId})
+				table.insert(rewardsTable, {IsResourceHarvest=true, Name="Pickaxe", ObjectId=currentRoom.PickaxePointId})
+			end
+			if currentRoom.ShovelPointId ~= nil and IsUseable({Id = currentRoom.ShovelPointId}) then
+				table.insert(rewardsTable, {IsResourceHarvest=true, Name="Shovel", ObjectId=currentRoom.ShovelPointId})
 			end
 			if currentRoom.ExorcismPointId ~= nil and IsUseable({Id = currentRoom.ExorcismPointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Tablet", Id=currentRoom.ExorcismPointId})
+				table.insert(rewardsTable, {IsResourceHarvest=true, Name="Tablet", ObjectId=currentRoom.ExorcismPointId})
 			end 
-			if currentRoom.FishingPointId ~= nil and IsUseable({Id = currentRoom.FishingPointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Type="Fish", Id=currentRoom.FishingPointId})
-			end 
+			if GetIdsByType({ Name = "FieldsRewardCage" }) then
+				for k,v in ipairs(GetIdsByType({ Name = "FieldsRewardCage" })) do
+					local name = ""
+
+					local ids = GetClosestIds({ Id = v, DestinationName = "Standing", Distance=1})
+					for _, id in pairs(ids) do
+						if id ~= 40000 and id ~= v then
+							if LootObjects[id] then
+								name = LootObjects[id].Name
+							end
+						end
+					end
+					table.insert(rewardsTable, {Name=name, ObjectId = v})
+				end
+			end
+			if MapState.OptionalRewards then
+				for k,v in pairs(MapState.OptionalRewards) do
+					table.insert(rewardsTable, {IsOptionalReward = true, Name=v.Name, ObjectId=k})
+				end
+			end
 		end
 
 		local tempTable = {}
@@ -1271,7 +1380,6 @@ function OnCodexPress()
 		end
 
 		rewardsTable = tempTable
-
 		if TableLength(rewardsTable) > 0 then
 			thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
 			OpenRewardMenu(rewardsTable)
@@ -1304,7 +1412,7 @@ end
 function wrap_GetDisplayName(baseFunc, args)
 	v = baseFunc(args)
 	if args.IgnoreSpecialFormatting then
-		return v:gsub("{[#!][^}]+}", "")
+		return v:gsub("{[^}]+}", "")
 	end
 	return v
 end
@@ -1423,7 +1531,7 @@ end
 function wrap_UpdateMetaUpgradeCard(screen, row, column)
 	local components = screen.Components
 	local button = components.MemCostModule
-	if button.Id then
+	if button.Id and MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1 ] then
 		local nextCostData = MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1 ].ResourceCost
 		local nextMetaUpgradeLevel = MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1 ]
 
@@ -1446,6 +1554,14 @@ function wrap_UpdateMetaUpgradeCard(screen, row, column)
 			SkipDraw = true,
 			Color = Color.Transparent,
 			UseDescription = true, LuaKey = "TempTextData", LuaValue = { Amount = nextMetaUpgradeLevel.CostIncrease}
+		})
+	else
+		DestroyTextBox({Id = button.Id})
+		CreateTextBox({
+			Id = button.Id,
+			Text = GetDisplayName({Text="IncreaseMetaUpgradeCard", IgnoreSpecialFormatting=true}) .. ", " .. GetDisplayName({Text="Max_MetaUpgrade", IgnoreSpecialFormatting=true}),
+			SkipDraw = true,
+			Color = Color.Transparent
 		})
 	end
 end

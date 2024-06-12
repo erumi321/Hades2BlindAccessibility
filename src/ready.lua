@@ -108,12 +108,26 @@ modutil.mod.Path.Wrap("UpdateMetaUpgradeCard", function(baseFunc, screen, row, c
 	return baseFunc(screen, row, column)
 end)
 
+modutil.mod.Path.Wrap("IncreaseMetaUpgradeCardLimit", function(baseFunc, screen, ...)
+	local ret = baseFunc(screen, ...)
+	wrap_UpdateMetaUpgradeCard(screen)
+	return ret
+end)
+
 modutil.mod.Path.Context.Wrap("OpenGraspLimitScreen", function(parentScreen)
 	modutil.mod.Path.Wrap("HandleScreenInput", function(baseFunc, ...)
 		wrap_OpenGraspLimitAcreen()
 
 		return baseFunc(...)
 	end)
+end)
+
+modutil.mod.Path.Wrap("ShipsSteeringWheelChoicePresentation", function(baseFunc, ...)
+	thread(function()
+		wait(0.1)
+		OpenAssesDoorShowerMenu(CollapseTable(MapState.ShipWheels))
+	end)
+	return baseFunc(...)
 end)
 
 local projectilePath = rom.path.combine(rom.paths.Content, 'Game/Projectiles/EnemyProjectiles.sjson')

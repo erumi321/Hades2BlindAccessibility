@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Dependency to TOLk mod to automatically install it
+- Interactable teleporter (Trait Tray -> Codex) now shows Hermes Shrines on the Surface
+
+### Fixed
+
+- Door menus in each area now work correctly
+- Gatherable resources now appear in correct menu when in a shop
+- Bug when grasp is fully upgraded is fixed
+
 ## [0.1.5] - 2024-05-27
 
 ### Fixed
