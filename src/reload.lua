@@ -5,6 +5,85 @@
 -- this file will be reloaded if it changes during gameplay,
 -- 	so only assign to values or define things here.
 
+function wrap_InventoryScreenDisplayCategory(screen, categoryIndex, args)
+	args = args or {}
+	local components = screen.Components
+	local category = screen.ItemCategories[categoryIndex]
+	if category.Locked then
+		return
+	end
+	local slotName = category.Name
+
+	for i, resourceName in ipairs(category) do
+		local resourceData = ResourceData[resourceName]
+		--mod menu
+		if not resourceData then
+			return
+		end
+		if (GameState.LifetimeResourcesGained[resourceName] or 0) > 0 or (resourceData.RevealGameStateRequirements ~= nil and IsGameStateEligible(CurrentRun, resourceData, resourceData.RevealGameStateRequirements)) then
+			local textLines = nil
+			local wantsToBeGifted = false
+			local canBeGifted = false
+			local wantsToBePlanted = 0 --0 for not a plant, 1 for a plant but not plantable, 2 for yes but not enough resources, 3 for yes
+			if screen.Args.PlantTarget ~= nil then
+				wantsToBePlanted = 1
+				if GardenData.Seeds[resourceName] then
+					wantsToBePlanted = 2
+					if HasResource(resourceName, 1) then
+						wantsToBePlanted = 3
+					end
+				end
+			elseif screen.Args.GiftTarget ~= nil then
+				wantsToBeGifted = true
+				if screen.Args.GiftTarget.UnlimitedGifts ~= nil and screen.Args.GiftTarget.UnlimitedGifts[resourceName] then
+					canBeGifted = true
+				else
+					local spending = {}
+					spending[resourceName] = 1
+					textLines = GetRandomEligibleTextLines(screen.Args.GiftTarget,
+						screen.Args.GiftTarget.GiftTextLineSets,
+						GetNarrativeDataValue(screen.Args.GiftTarget, "GiftTextLinePriorities"), { Spending = spending })
+					if textLines ~= nil then
+						canBeGifted = true
+					end
+				end
+			end
+
+			local button = components[resourceName]
+
+			local statusText = ""
+			if wantsToBeGifted then
+				statusText = GetDisplayName({ Text = "Menu_Gift", IgnoreSpecialFormatting = true }) .. ": "
+				if canBeGifted then
+					statusText = statusText .. GetDisplayName({ Text = "ExitConfirm_Confirm", IgnoreSpecialFormatting = true })
+				else
+					statusText = statusText ..
+					GetDisplayName({ Text = "InventoryScreen_GiftNotWanted", IgnoreSpecialFormatting = true })
+				end
+				statusText = statusText .. ", "
+			elseif wantsToBePlanted ~= 0 then
+				statusText = GetDisplayName({ Text = "Menu_Plant", IgnoreSpecialFormatting = true }) .. ": "
+				if wantsToBePlanted == 1 then
+					statusText = statusText ..
+					GetDisplayName({ Text = "InventoryScreen_SeedNotWanted", IgnoreSpecialFormatting = true })
+				elseif wantsToBePlanted == 2 then
+					statusText = statusText ..
+					GetDisplayName({ Text = "InventoryScreen_GiftNotAvailable", IgnoreSpecialFormatting = true })
+				elseif wantsToBePlanted == 3 then
+					statusText = statusText .. GetDisplayName({ Text = "ExitConfirm_Confirm", IgnoreSpecialFormatting = true })
+				end
+				statusText = statusText .. ", "
+			end
+
+			ModifyTextBox({
+				Id = button.Id,
+				Text = GetDisplayName({ Text = resourceName, IgnoreSpecialFormatting = true }) ..
+				": " .. (GameState.Resources[resourceName] or 0) .. ", " .. statusText
+			})
+		end
+	end
+end
+
 function OnInventoryPress()
 	if not IsScreenOpen("TraitTrayScreen") then
 		return
@@ -55,8 +134,8 @@ function OpenAssesDoorShowerMenu(doors)
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Asses_UI_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
 	components.CloseButton.OnPressedFunctionName = "BlindAccessCloseAssesDoorShowerScreen"
-	components.CloseButton.ControlHotkeys = { "Cancel", }
-	components.CloseButton.MouseControlHotkeys  = { "Cancel" }
+	components.CloseButton.ControlHotkeys        = { "Cancel", }
+	components.CloseButton.MouseControlHotkeys   = { "Cancel" }
 
 	SetScale({ Id = components.ShopBackgroundDim.Id, Fraction = 4 })
 	SetColor({ Id = components.ShopBackgroundDim.Id, Color = { 0, 0, 0, 1 } })
@@ -85,7 +164,7 @@ function CreateAssesDoorButtons(screen, doors)
 	local curY = startY
 	local components = screen.Components
 	local isFirstButton = true
-	
+
 	local inCityHub = GetMapName() == "N_Hub"
 	local inCityRoom = GetMapName():find("N_") == 1 and not inCityHub
 	local inShip = GetMapName():find("O_") == 1
@@ -93,25 +172,25 @@ function CreateAssesDoorButtons(screen, doors)
 	if inCityHub then
 		curX = 500
 		local doorSortValue = function(door)
-			local v = GetDisplayName({Text=getDoorSound(door, false):gsub("Room", ""), IgnoreSpecialFormatting=true})
+			local v = GetDisplayName({ Text = getDoorSound(door, false):gsub("Room", ""), IgnoreSpecialFormatting = true })
 			if v:find(" ") == 1 then
 				v = v:sub(2)
 			end
 			return v
 		end
-		table.sort(doors, function(a,b) return doorSortValue(a) < doorSortValue(b) end)
+		table.sort(doors, function(a, b) return doorSortValue(a) < doorSortValue(b) end)
 	end
 
 	local healthKey = "AssesResourceMenuInformationHealth"
 	components[healthKey] =
-	CreateScreenComponent({
-		Name = "ButtonDefault",
-		Group = "Asses_UI",
-		Scale = 0.8,
-		X = 960,
-		Y = curY
-	})
-	AttachLua({ Id = components[healthKey].Id, Table =components[healthKey] })
+		CreateScreenComponent({
+			Name = "ButtonDefault",
+			Group = "Asses_UI",
+			Scale = 0.8,
+			X = 960,
+			Y = curY
+		})
+	AttachLua({ Id = components[healthKey].Id, Table = components[healthKey] })
 
 	CreateTextBox({
 		Id = components[healthKey].Id,
@@ -131,14 +210,14 @@ function CreateAssesDoorButtons(screen, doors)
 
 	local armorKey = "AssesResourceMenuInformationArmor"
 	components[armorKey] =
-	CreateScreenComponent({
-		Name = "ButtonDefault",
-		Group = "Asses_UI",
-		Scale = 0.8,
-		X = 960,
-		Y = curY
-	})
-	AttachLua({ Id = components[armorKey].Id, Table =components[armorKey] })
+		CreateScreenComponent({
+			Name = "ButtonDefault",
+			Group = "Asses_UI",
+			Scale = 0.8,
+			X = 960,
+			Y = curY
+		})
+	AttachLua({ Id = components[armorKey].Id, Table = components[armorKey] })
 	CreateTextBox({
 		Id = components[armorKey].Id,
 		Text = "Armor: " .. (CurrentRun.Hero.HealthBuffer or 0),
@@ -157,14 +236,14 @@ function CreateAssesDoorButtons(screen, doors)
 
 	local goldKey = "AssesResourceMenuInformationGold"
 	components[goldKey] =
-	CreateScreenComponent({
-		Name = "ButtonDefault",
-		Group = "Asses_UI",
-		Scale = 0.8,
-		X = 960,
-		Y = curY
-	})
-	AttachLua({ Id = components[goldKey].Id, Table =components[goldKey] })
+		CreateScreenComponent({
+			Name = "ButtonDefault",
+			Group = "Asses_UI",
+			Scale = 0.8,
+			X = 960,
+			Y = curY
+		})
+	AttachLua({ Id = components[goldKey].Id, Table = components[goldKey] })
 	CreateTextBox({
 		Id = components[goldKey].Id,
 		Text = "Gold: " .. (GameState.Resources["Money"] or 0),
@@ -188,47 +267,53 @@ function CreateAssesDoorButtons(screen, doors)
 			end
 		end
 		if showDoor then
-
 			local displayText = ""
 			if inShip then
 				if door.Name == "ShipsExitDoor" or door.Name == "ShipsPostBossDoor" then
 					if door.RewardPreviewAnimName == "ShopPreview" then
-						displayText = GetDisplayName({Text="UseStore", IgnoreSpecialFormatting=true})
+						displayText = GetDisplayName({ Text = "UseStore", IgnoreSpecialFormatting = true })
 					else
-						displayText = displayText .. GetDisplayName({Text=getDoorSound(door, false), IgnoreSpecialFormatting=true})
+						displayText = displayText ..
+						GetDisplayName({ Text = getDoorSound(door, false), IgnoreSpecialFormatting = true })
 					end
 				else
-					displayText = GetDisplayName({Text=door.ChosenRewardType, IgnoreSpecialFormatting=true})
+					displayText = GetDisplayName({ Text = door.ChosenRewardType, IgnoreSpecialFormatting = true })
 				end
 			elseif inCityRoom then
 				if door.Name == "EphyraExitDoorReturn" or door.ReturnToPreviousRoomName == "N_Hub" then
-					displayText = GetDisplayName({Text="BiomeN", IgnoreSpecialFormatting=true})
+					displayText = GetDisplayName({ Text = "BiomeN", IgnoreSpecialFormatting = true })
 				else
-					displayText = GetDisplayName({Text="RoomAlt", IgnoreSpecialFormatting=true})
+					displayText = GetDisplayName({ Text = "RoomAlt", IgnoreSpecialFormatting = true })
 				end
 			else
 				if door.Room.ChosenRewardType == "Devotion" then
-					displayText = displayText .. GetDisplayName({Text=getDoorSound(door, false), IgnoreSpecialFormatting=true}) .. " "
-					displayText = displayText .. GetDisplayName({Text=getDoorSound(door, true), IgnoreSpecialFormatting=true})
+					displayText = displayText ..
+					GetDisplayName({ Text = getDoorSound(door, false), IgnoreSpecialFormatting = true }) .. " "
+					displayText = displayText ..
+					GetDisplayName({ Text = getDoorSound(door, true), IgnoreSpecialFormatting = true })
 				else
-					displayText = displayText .. GetDisplayName({Text=getDoorSound(door, false), IgnoreSpecialFormatting=true})
+					displayText = displayText ..
+					GetDisplayName({ Text = getDoorSound(door, false), IgnoreSpecialFormatting = true })
 				end
 
 				if door.Name == "FieldsExitDoor" and door.Room.CageRewards then
 					displayText = ""
-					for k,reward in pairs(door.Room.CageRewards) do
-						displayText = displayText .. GetDisplayName({Text=reward.RewardType:gsub("Room", ""), IgnoreSpecialFormatting=true}) .. ", "
+					for k, reward in pairs(door.Room.CageRewards) do
+						displayText = displayText ..
+						GetDisplayName({ Text = reward.RewardType:gsub("Room", ""), IgnoreSpecialFormatting = true }) ..
+						", "
 					end
 					displayText = displayText:sub(0, -3)
 				else
 					if displayText == "ElementalBoost" then
 						displayText = "Boon_Infusion"
 					end
-					displayText = GetDisplayName({Text=displayText:gsub("Room", ""):gsub("Drop", ""), IgnoreSpecialFormatting=true})
+					displayText = GetDisplayName({ Text = displayText:gsub("Room", ""):gsub("Drop", ""), IgnoreSpecialFormatting = true })
 				end
 
 				if displayText == "ClockworkGoal" and CurrentRun.RemainingClockworkGoals then
-					displayText = GetDisplayName({Text="ChamberMoverUsed", IgnoreSpecialFormatting=true}) .. " " .. CurrentRun.RemainingClockworkGoals
+					displayText = GetDisplayName({ Text = "ChamberMoverUsed", IgnoreSpecialFormatting = true }) ..
+					" " .. CurrentRun.RemainingClockworkGoals
 				end
 
 
@@ -261,10 +346,10 @@ function CreateAssesDoorButtons(screen, doors)
 					X = curX,
 					Y = curY
 				})
-				SetScaleX({Id = components[buttonKey].Id, Fraction=1})
+			SetScaleX({ Id = components[buttonKey].Id, Fraction = 1 })
 			components[buttonKey].OnPressedFunctionName = "BlindAccessAssesDoorMenuSoundSet"
 			components[buttonKey].door = door
-			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+			AttachLua({ Id = components[buttonKey].Id, Table = components[buttonKey] })
 			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
 			--Attach({ Id = components[buttonKey].Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = xPos, OffsetY = curY })
 
@@ -320,7 +405,7 @@ function doDefaultSound(door)
 		offsetX = 200
 		offsetY = -140
 	end
-	Teleport({ Id = CurrentRun.Hero.ObjectId, DestinationId = door.ObjectId, OffsetX = offsetX, OffsetY = offsetY})
+	Teleport({ Id = CurrentRun.Hero.ObjectId, DestinationId = door.ObjectId, OffsetX = offsetX, OffsetY = offsetY })
 end
 
 function getDoorSound(door, devotionSlot)
@@ -355,124 +440,12 @@ function getDoorSound(door, devotionSlot)
 		devotionLootName = devotionLootName:gsub("Progress", ""):gsub("Drop", ""):gsub("Run", ""):gsub("Upgrade", "")
 		return devotionLootName
 	else
-		local resourceName = room.ChosenRewardType--:gsub("Progress", ""):gsub("Drop", ""):gsub("Run", "")
+		local resourceName = room.ChosenRewardType --:gsub("Progress", ""):gsub("Drop", ""):gsub("Run", "")
 		if door.Name == "ShrinePointDoor" then
 			resourceName = resourceName .. " (Infernal Gate)"
 		end
 		return resourceName
 	end
-end
-
-function rom.game.BlindAccessTryOpenSimplifiedInventory(screen, button) 
-	if not IsScreenOpen("BlindAccesibilityInventoryMenu") then
-		local currentResources = {}
-		for k,resourceName in pairs(screen.ItemCategories[screen.ActiveCategoryIndex]) do
-			local amount = GameState.Resources[resourceName]
-			if amount ~= nil and GetDisplayName({Text = resourceName, IgnoreSpecialFormatting=true}) ~= resourceName then
-				table.insert(currentResources, {Resource = resourceName, Name = GetDisplayName({Text = resourceName, IgnoreSpecialFormatting=true}), Amount = amount})
-			end
-		end
-
-		table.sort(currentResources, function(a,b) return a.Name < b.Name end)
-
-	 	thread(CloseInventoryScreen, screen, button)
-		-- thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
-
-		OpenSimplifiedInventory(currentResources)
-	end
-end
-
-function OpenSimplifiedInventory(resources) 
-	local screen = DeepCopyTable(ScreenData.BlindAccesibilityInventoryMenu)
-
-	if IsScreenOpen(screen.Name) then
-		return
-	end
-	OnScreenOpened(screen)
-	HideCombatUI(screen.Name)
-
-	PlaySound({ Name = "/SFX/Menu Sounds/ContractorMenuOpen" })
-	local components = screen.Components
-
-	components.ShopBackgroundDim = CreateScreenComponent({ Name = "rectangle01", Group = "Menu_UI" })
-	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Menu_UI_Backing", Scale = 0.7 })
-	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
-	components.CloseButton.OnPressedFunctionName = "BlindAccessCloseInventoryMenu"
-	components.CloseButton.ControlHotkeys = { "Cancel", }
-	components.CloseButton.MouseControlHotkeys  = { "Cancel", "Inventory", }
-
-	SetScale({ Id = components.ShopBackgroundDim.Id, Fraction = 4 })
-	SetColor({ Id = components.ShopBackgroundDim.Id, Color = { 0, 0, 0, 1 } })
-
-	CreateInventoryButtons(screen, resources)
-	screen.KeepOpen = true
-	-- thread(HandleWASDInput, screen)
-	HandleScreenInput(screen)
-	-- SetConfigOption({ Name = "ExclusiveInteractGroup", Value = "Menu_UI" })
-
-	return screen
-end
-
-function CreateInventoryButtons(screen, resources)
-	local startX = 360
-	local startY = 135
-	local endY = 635
-	local xIncrement = 300
-	local yIncrement = 55
-
-	local curY = startY
-	local curX = startX
-
-	local components = screen.Components
-	local isFirstButton = true
-
-	for resource, resourceData in pairs(resources) do
-		local buttonKey = "InventoryMenuText" .. resourceData.Resource
-		components[buttonKey] =
-			CreateScreenComponent({
-				Name = "ButtonDefault",
-				Group = "Menu_UI_Inventory",
-				Scale = 0.8,
-				X = curX,
-				Y = curY
-			})
-		AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
-		-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
-		CreateTextBox({
-			Id = components[buttonKey].Id,
-			Text = resourceData.Name .. " : " .. resourceData.Amount,
-			FontSize = 24,
-			OffsetX = -100,
-			OffsetY = 0,
-			Color = Color.White,
-			Font = "P22UndergroundSCMedium",
-			Group = "Menu_UI_Inventory",
-			ShadowBlur = 0,
-			ShadowColor = { 0, 0, 0, 1 },
-			ShadowOffset = { 0, 2 },
-			Justification = "Left",
-		})
-		if isFirstButton then
-			TeleportCursor({ OffsetX = curX + 300, OffsetY = curY })
-			wait(0.2)
-			TeleportCursor({ OffsetX = curX, OffsetY = curY })
-			isFirstButton = false
-		end
-		curY = curY + yIncrement
-		if curY >= endY then
-			curY = startY
-			curX = curX + xIncrement 
-		end
-	end
-end
-
-function rom.game.BlindAccessCloseInventoryMenu(screen, button)
-	SetConfigOption({ Name = "ExclusiveInteractGroup", Value = nil })
-	OnScreenCloseStarted(screen)
-	CloseScreen(GetAllIds(screen.Components), 0.15)
-	OnScreenCloseFinished(screen)
-	notifyExistingWaiters(screen.Name)
-	ShowCombatUI(screen.Name)
 end
 
 local mapPointsOfInterest = {
@@ -482,28 +455,29 @@ local mapPointsOfInterest = {
 			local copy = ShallowCopyTable(t)
 			local name = ""
 			local objectId = nil
-			for k,plot in pairs(GameState.GardenPlots) do
+			for k, plot in pairs(GameState.GardenPlots) do
 				if plot.GrowTimeRemaining == 0 then
 					objectId = plot.ObjectId
 					if plot.StoredGrows > 0 then
-						name = GetDisplayName({Text = "GardenPlots", IgnoreSpecialFormatting=true}) .. " - Harvestable"
+						name = GetDisplayName({ Text = "GardenPlots", IgnoreSpecialFormatting = true }) ..
+						" - Harvestable"
 						break
 					else
-						name = GetDisplayName({Text = "GardenPlots", IgnoreSpecialFormatting=true}) .. " - Plantable"
+						name = GetDisplayName({ Text = "GardenPlots", IgnoreSpecialFormatting = true }) .. " - Plantable"
 					end
 				end
 			end
 			if name ~= "" then
-				table.insert(copy, {Name = name, ObjectId = objectId, DestinationOffsetX=100})
+				table.insert(copy, { Name = name, ObjectId = objectId, DestinationOffsetX = 100 })
 			end
 			return copy
 		end,
 		Objects = {
-			{Name = "QuestLog_Unlocked_Subtitle", ObjectId=589991},
-			{Name = "GhostAdminScreen_Title", ObjectId=567390, DestinationOffsetY = 137, RequireUseable=false},
-			{Name = "Broker", ObjectId=558096, DestinationOffsetX = 140, DestinationOffsetY = 35},
-			{Name = "Supply Drop", ObjectId=583652, DestinationOffsetX=117, DestinationOffsetY=-64}, --No direct translation in sjson
-			{Name = "Training Ground", ObjectId=587947, RequireUseable=false} --No direct translation in sjson 
+			{ Name = "QuestLog_Unlocked_Subtitle", ObjectId = 589991 },
+			{ Name = "GhostAdminScreen_Title",     ObjectId = 567390, DestinationOffsetY = 137, RequireUseable = false },
+			{ Name = "Broker",                     ObjectId = 558096, DestinationOffsetX = 140, DestinationOffsetY = 35 },
+			{ Name = "Supply Drop",                ObjectId = 583652, DestinationOffsetX = 117, DestinationOffsetY = -64 }, --No direct translation in sjson
+			{ Name = "Training Ground",            ObjectId = 587947, RequireUseable = false } --No direct translation in sjson
 			--we're cheating a little here as this is the telport to the stair object in the loading zone, as every once in a while the actual loading zone has not been found
 		}
 	},
@@ -511,33 +485,37 @@ local mapPointsOfInterest = {
 		AddNPCs = true,
 		SetupFunction = function(t)
 			local copy = ShallowCopyTable(t)
-			for index, weaponName in ipairs( WeaponSets.HeroPrimaryWeapons ) do
+			for index, weaponName in ipairs(WeaponSets.HeroPrimaryWeapons) do
 				local suffix = ""
-				if IsBonusUnusedWeapon( weaponName ) then
-					suffix = " - " .. GetDisplayName({Text = "UnusedWeaponBonusTrait", IgnoreSpecialFormatting=true})
+				if IsBonusUnusedWeapon(weaponName) then
+					suffix = " - " .. GetDisplayName({ Text = "UnusedWeaponBonusTrait", IgnoreSpecialFormatting = true })
 				end
-				if IsUseable({Id = MapState.WeaponKitIds[index]}) then
-					table.insert(copy, {Name = GetDisplayName({Text="WeaponSet"}) .. " " .. GetDisplayName({Text=weaponName}) .. suffix, ObjectId =MapState.WeaponKitIds[index] })
+				if IsUseable({ Id = MapState.WeaponKitIds[index] }) then
+					table.insert(copy,
+						{ Name = GetDisplayName({ Text = "WeaponSet" }) ..
+						" " .. GetDisplayName({ Text = weaponName }) .. suffix, ObjectId = MapState.WeaponKitIds[index] })
 				end
 			end
 
-			for index, toolName in ipairs( ToolOrderData ) do
+			for index, toolName in ipairs(ToolOrderData) do
 				local kitId = MapState.ToolKitIds[index]
-				if IsUseable({Id = kitId}) then
-					table.insert(copy, {Name = GetDisplayName({Text = "Tool", IgnoreSpecialFormatting=true}) .. " " .. GetDisplayName({Text=toolName, IgnoreSpecialFormatting=true}), ObjectId = kitId })
+				if IsUseable({ Id = kitId }) then
+					table.insert(copy,
+						{ Name = GetDisplayName({ Text = "Tool", IgnoreSpecialFormatting = true }) ..
+						" " .. GetDisplayName({ Text = toolName, IgnoreSpecialFormatting = true }), ObjectId = kitId })
 				end
 			end
 			return copy
 		end,
 		Objects = {
-			{Name = "TraitTray_Category_MetaUpgrades", ObjectId=587228, RequireUseable=false},
-			{Name = "WeaponShop", ObjectId=558210, RequireUseable=false},
-			{Name = "BountyBoard", ObjectId=561146, DestinationOffsetX=-17, DestinationOffsetY=82},
-			{Name = "Keepsakes", ObjectId=421320, DestinationOffsetX=119, DestinationOffsetY=30},
-			{Name = "BiomeF", ObjectId=587938, DestinationOffsetX=263, DestinationOffsetY=-293, RequireUseable=false},
-			{Name = "RunHistoryScreen_RouteN", ObjectId=587935, DestinationOffsetX=-162, DestinationOffsetY=194, RequireUseable=false},
-			{Name = "ShrineMenu", ObjectId=589694, DestinationOffsetY=90},
-			{Name = "Hub", ObjectId=588689, RequireUseable=false},
+			{ Name = "TraitTray_Category_MetaUpgrades", ObjectId = 587228, RequireUseable = false },
+			{ Name = "WeaponShop",                      ObjectId = 558210, RequireUseable = false },
+			{ Name = "BountyBoard",                     ObjectId = 561146, DestinationOffsetX = -17, DestinationOffsetY = 82 },
+			{ Name = "Keepsakes",                       ObjectId = 421320, DestinationOffsetX = 119, DestinationOffsetY = 30 },
+			{ Name = "BiomeF",                          ObjectId = 587938, DestinationOffsetX = 263, DestinationOffsetY = -293, RequireUseable = false },
+			{ Name = "RunHistoryScreen_RouteN",         ObjectId = 587935, DestinationOffsetX = -162, DestinationOffsetY = 194, RequireUseable = false },
+			{ Name = "ShrineMenu",                      ObjectId = 589694, DestinationOffsetY = 90 },
+			{ Name = "Hub",                             ObjectId = 588689, RequireUseable = false },
 		}
 	}
 }
@@ -549,23 +527,23 @@ function ProcessTable(objects, blockIds)
 	for map_name, map_data in pairs(mapPointsOfInterest) do
 		if map_name == map or map_name == "*" then
 			for _, object in pairs(map_data.Objects) do
-				if object.RequireUseable == false or IsUseable({Id = object.ObjectId}) then
+				if object.RequireUseable == false or IsUseable({ Id = object.ObjectId }) then
 					local o = ShallowCopyTable(object)
-					o.Name = GetDisplayName({Text=o.Name, IgnoreSpecialFormatting=true})
+					o.Name = GetDisplayName({ Text = o.Name, IgnoreSpecialFormatting = true })
 					table.insert(t, o)
 				end
 			end
 			if map_data.AddNPCs and GameState and GameState.Flags and not GameState.Flags.InFlashback then
 				t = AddNPCs(t)
 			end
-	
+
 			if map_data.SetupFunction ~= nil then
 				t = map_data.SetupFunction(t)
 			end
 		end
 	end
 
-	table.sort(t, function(a,b) return a.Name < b.Name end)
+	table.sort(t, function(a, b) return a.Name < b.Name end)
 
 	if CurrentRun and CurrentRun.CurrentRoom and CurrentRun.CurrentRoom.ExitsUnlocked then
 		t = AddTrove(t)
@@ -597,7 +575,7 @@ function AddTrove(objects)
 	local switch = {
 		["ObjectId"] = CurrentRun.CurrentRoom.ChallengeSwitch.ObjectId,
 		["Name"] = "Infernal Trove (" ..
-			(GetDisplayName({Text = CurrentRun.CurrentRoom.ChallengeSwitch.RewardType or CurrentRun.CurrentRoom.ChallengeSwitch.RewardType, IgnoreSpecialFormatting=true})) ..
+			(GetDisplayName({ Text = CurrentRun.CurrentRoom.ChallengeSwitch.RewardType or CurrentRun.CurrentRoom.ChallengeSwitch.RewardType, IgnoreSpecialFormatting = true })) ..
 			")",
 	}
 	if not ObjectAlreadyPresent(switch, copy) then
@@ -655,7 +633,6 @@ function AddPool(objects)
 	return copy
 end
 
-
 function AddNPCs(objects)
 	if CurrentRun and IsCombatEncounterActive(CurrentRun) then
 		return objects
@@ -670,15 +647,15 @@ function AddNPCs(objects)
 		if IsUseable({ Id = npcs[i].ObjectId }) then
 			local npc = {
 				["ObjectId"] = npcs[i].ObjectId,
-				["Name"] = GetDisplayName({Text=npcs[i].Name, IgnoreSpecialFormatting=true}),
+				["Name"] = GetDisplayName({ Text = npcs[i].Name, IgnoreSpecialFormatting = true }),
 			}
-			if npcs[i].Name == "NPC_Hades_01" and GetMapName() == "Hub_Main" then --Hades in house
+			if npcs[i].Name == "NPC_Hades_01" and GetMapName() == "Hub_Main" then   --Hades in house
 				if ActiveEnemies[555686] then                                       --Hades is in garden
 					npc["ObjectId"] = 555686
 				elseif GetDistance({ Id = npc["ObjectId"], DestinationId = 422028 }) < 100 then --Hades on his throne
 					npc["DestinationOffsetY"] = 150
 				end
-			elseif npcs[i].Name == "NPC_Cerberus_01" and GetMapName() == "Hub_Main" and GetDistance({ Id = npc["ObjectId"], DestinationId = 422028 }) > 500 then                                                                                                 --Cerberus not present in house
+			elseif npcs[i].Name == "NPC_Cerberus_01" and GetMapName() == "Hub_Main" and GetDistance({ Id = npc["ObjectId"], DestinationId = 422028 }) > 500 then                                                                                                     --Cerberus not present in house
 				skip = true
 			elseif npcs[i].Name == "NPC_Cerberus_Field_01" and TableLength(MapState.OfferedExitDoors) == 1 and CollapseTable(MapState.OfferedExitDoors)[1].Room.Name:find("D_Boss", 1, true) == 1 and GetDistance({ Id = npc["ObjectId"], DestinationId = 551569 }) == 0 then --Cerberus in Styx after having been given satyr sack
 				skip = true
@@ -736,8 +713,8 @@ function OpenRewardMenu(rewards)
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Menu_UI_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
 	components.CloseButton.OnPressedFunctionName = "BlindAccessCloseRewardMenu"
-	components.CloseButton.ControlHotkeys = { "Cancel", }
-	components.CloseButton.MouseControlHotkeys  = { "Cancel", }
+	components.CloseButton.ControlHotkeys        = { "Cancel", }
+	components.CloseButton.MouseControlHotkeys   = { "Cancel", }
 
 	SetScale({ Id = components.ShopBackgroundDim.Id, Fraction = 4 })
 	SetColor({ Id = components.ShopBackgroundDim.Id, Color = { 0, 0, 0, 1 } })
@@ -759,15 +736,15 @@ function CreateRewardButtons(screen, rewards)
 	if not string.find(GetMapName(), "Hub_PreRun") and GetMapName():find("Hub_Main", 1, true) ~= 1 and GetMapName():find("E_", 1, true) ~= 1 then
 		local healthKey = "AssesResourceMenuInformationHealth"
 		components[healthKey] =
-		CreateScreenComponent({
-			Name = "ButtonDefault",
-			Group = "Menu_UI_Rewards",
-			Scale = 0.8,
-			X = 960,
-			Y = curY
-		})
-		AttachLua({ Id = components[healthKey].Id, Table =components[healthKey] })
-	
+			CreateScreenComponent({
+				Name = "ButtonDefault",
+				Group = "Menu_UI_Rewards",
+				Scale = 0.8,
+				X = 960,
+				Y = curY
+			})
+		AttachLua({ Id = components[healthKey].Id, Table = components[healthKey] })
+
 		CreateTextBox({
 			Id = components[healthKey].Id,
 			Text = "Health: " .. (CurrentRun.Hero.Health or 0) .. "/" .. (CurrentRun.Hero.MaxHealth or 0),
@@ -783,17 +760,17 @@ function CreateRewardButtons(screen, rewards)
 			Justification = "Left",
 		})
 		curY = curY + yIncrement
-	
+
 		local armorKey = "AssesResourceMenuInformationArmor"
 		components[armorKey] =
-		CreateScreenComponent({
-			Name = "ButtonDefault",
-			Group = "Menu_UI_Rewards",
-			Scale = 0.8,
-			X = 960,
-			Y = curY
-		})
-		AttachLua({ Id = components[armorKey].Id, Table =components[armorKey] })
+			CreateScreenComponent({
+				Name = "ButtonDefault",
+				Group = "Menu_UI_Rewards",
+				Scale = 0.8,
+				X = 960,
+				Y = curY
+			})
+		AttachLua({ Id = components[armorKey].Id, Table = components[armorKey] })
 		CreateTextBox({
 			Id = components[armorKey].Id,
 			Text = "Armor: " .. (CurrentRun.Hero.HealthBuffer or 0),
@@ -809,17 +786,17 @@ function CreateRewardButtons(screen, rewards)
 			Justification = "Left",
 		})
 		curY = curY + yIncrement
-	
+
 		local goldKey = "AssesResourceMenuInformationGold"
 		components[goldKey] =
-		CreateScreenComponent({
-			Name = "ButtonDefault",
-			Group = "Menu_UI_Rewards",
-			Scale = 0.8,
-			X = 960,
-			Y = curY
-		})
-		AttachLua({ Id = components[goldKey].Id, Table =components[goldKey] })
+			CreateScreenComponent({
+				Name = "ButtonDefault",
+				Group = "Menu_UI_Rewards",
+				Scale = 0.8,
+				X = 960,
+				Y = curY
+			})
+		AttachLua({ Id = components[goldKey].Id, Table = components[goldKey] })
 		CreateTextBox({
 			Id = components[goldKey].Id,
 			Text = "Gold: " .. (GameState.Resources["Money"] or 0),
@@ -851,21 +828,23 @@ function CreateRewardButtons(screen, rewards)
 				Y = curY
 			})
 
-			SetScaleX({Id = components[buttonKey].Id, Fraction=4})
-		AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+		SetScaleX({ Id = components[buttonKey].Id, Fraction = 4 })
+		AttachLua({ Id = components[buttonKey].Id, Table = components[buttonKey] })
 		-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
 		components[buttonKey].index = k
 		components[buttonKey].reward = reward
 		components[buttonKey].OnPressedFunctionName = "BlindAccessGoToReward"
 		if reward.Args ~= nil and reward.Args.ForceLootName then
-			displayText = reward.Args.ForceLootName--:gsub("Upgrade", ""):gsub("Drop", "")
+			displayText = reward.Args.ForceLootName --:gsub("Upgrade", ""):gsub("Drop", "")
 		end
 		if displayText:find("Drop") == #displayText - 3 then
 			displayText = displayText:sub(1, -5)
 		end
-		displayText = GetDisplayName({Text=displayText, IgnoreSpecialFormatting=true}) .. " " --we need this space for Echo, NPC_Echo_01 -> "Echo" -> "Blitz" since "Echo" is an id
+		displayText = GetDisplayName({ Text = displayText, IgnoreSpecialFormatting = true }) ..
+		" "                                                                             --we need this space for Echo, NPC_Echo_01 -> "Echo" -> "Blitz" since "Echo" is an id
 		if reward.IsOptionalReward then
-			displayText = displayText .. "(" .. GetDisplayName({Text="MetaRewardAlt", IgnoreSpecialFormatting=true}) .. ")"
+			displayText = displayText ..
+			"(" .. GetDisplayName({ Text = "MetaRewardAlt", IgnoreSpecialFormatting = true }) .. ")"
 		end
 		if displayText == "RandomLoot " then
 			if LootObjects[reward.ObjectId] ~= nil then
@@ -948,7 +927,6 @@ function rom.game.BlindAccessCloseRewardMenu(screen, button)
 	ShowCombatUI(screen.Name)
 end
 
-
 function NumUseableObjects(objects)
 	local count = 0
 	if objects ~= nil then
@@ -978,8 +956,8 @@ function OpenStoreMenu(items)
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Asses_UI_Store_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
 	components.CloseButton.OnPressedFunctionName = "BlindAccessCloseItemScreen"
-	components.CloseButton.ControlHotkeys = { "Cancel", }
-	components.CloseButton.MouseControlHotkeys  = { "Cancel", }
+	components.CloseButton.ControlHotkeys        = { "Cancel", }
+	components.CloseButton.MouseControlHotkeys   = { "Cancel", }
 
 	SetScale({ Id = components.ShopBackgroundDim.Id, Fraction = 4 })
 	SetColor({ Id = components.ShopBackgroundDim.Id, Color = { 0, 0, 0, 1 } })
@@ -999,14 +977,14 @@ function CreateItemButtons(screen, items)
 	local isFirstButton = true
 	local healthKey = "AssesResourceMenuInformationHealth"
 	components[healthKey] =
-	CreateScreenComponent({
-		Name = "ButtonDefault",
-		Group = "Asses_UI_Store",
-		Scale = 0.8,
-		X = 960,
-		Y = curY
-	})
-	AttachLua({ Id = components[healthKey].Id, Table =components[healthKey] })
+		CreateScreenComponent({
+			Name = "ButtonDefault",
+			Group = "Asses_UI_Store",
+			Scale = 0.8,
+			X = 960,
+			Y = curY
+		})
+	AttachLua({ Id = components[healthKey].Id, Table = components[healthKey] })
 
 	CreateTextBox({
 		Id = components[healthKey].Id,
@@ -1026,14 +1004,14 @@ function CreateItemButtons(screen, items)
 
 	local armorKey = "AssesResourceMenuInformationArmor"
 	components[armorKey] =
-	CreateScreenComponent({
-		Name = "ButtonDefault",
-		Group = "Asses_UI_Store",
-		Scale = 0.8,
-		X = 960,
-		Y = curY
-	})
-	AttachLua({ Id = components[armorKey].Id, Table =components[armorKey] })
+		CreateScreenComponent({
+			Name = "ButtonDefault",
+			Group = "Asses_UI_Store",
+			Scale = 0.8,
+			X = 960,
+			Y = curY
+		})
+	AttachLua({ Id = components[armorKey].Id, Table = components[armorKey] })
 	CreateTextBox({
 		Id = components[armorKey].Id,
 		Text = "Armor: " .. (CurrentRun.Hero.HealthBuffer or 0),
@@ -1052,14 +1030,14 @@ function CreateItemButtons(screen, items)
 
 	local goldKey = "AssesResourceMenuInformationGold"
 	components[goldKey] =
-	CreateScreenComponent({
-		Name = "ButtonDefault",
-		Group = "Asses_UI_Store",
-		Scale = 0.8,
-		X = 960,
-		Y = curY
-	})
-	AttachLua({ Id = components[goldKey].Id, Table =components[goldKey] })
+		CreateScreenComponent({
+			Name = "ButtonDefault",
+			Group = "Asses_UI_Store",
+			Scale = 0.8,
+			X = 960,
+			Y = curY
+		})
+	AttachLua({ Id = components[goldKey].Id, Table = components[goldKey] })
 	CreateTextBox({
 		Id = components[goldKey].Id,
 		Text = "Gold: " .. (GameState.Resources["Money"] or 0),
@@ -1090,7 +1068,7 @@ function CreateItemButtons(screen, items)
 			components[buttonKey].index = k
 			components[buttonKey].item = item
 			components[buttonKey].OnPressedFunctionName = "BlindAccessMoveToItem"
-			AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+			AttachLua({ Id = components[buttonKey].Id, Table = components[buttonKey] })
 			-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
 
 			if displayText == "RandomLoot" then
@@ -1101,7 +1079,7 @@ function CreateItemButtons(screen, items)
 			displayText = displayText:gsub("RoomReward", ""):gsub("StoreReward", "") or displayText
 			CreateTextBox({
 				Id = components[buttonKey].Id,
-				Text = GetDisplayName({Text=displayText, IgnoreSpecialFormatting=true}),
+				Text = GetDisplayName({ Text = displayText, IgnoreSpecialFormatting = true }),
 				UseDescription = false,
 				FontSize = 24,
 				OffsetX = -520,
@@ -1164,7 +1142,7 @@ function CreateArcanaSpeechText(button, args, buttonArgs)
 		DestroyTextBox({ Id = button.Id })
 		local cardName = button.CardName
 		local metaUpgradeData = MetaUpgradeCardData[cardName]
-		
+
 		c.UseDescription = false
 
 		local state = "HIDDEN"
@@ -1173,32 +1151,36 @@ function CreateArcanaSpeechText(button, args, buttonArgs)
 		else
 			if GameState.MetaUpgradeState[cardName].Unlocked then
 				state = "UNLOCKED"
-			elseif HasNeighboringUnlockedCards( buttonArgs.Row, buttonArgs.Column ) or (buttonArgs.Row == 1 and buttonArgs.Column == 1) then
+			elseif HasNeighboringUnlockedCards(buttonArgs.Row, buttonArgs.Column) or (buttonArgs.Row == 1 and buttonArgs.Column == 1) then
 				state = "LOCKED"
 			end
 		end
-		
-		local stateText = GetDisplayName({Text="AwardMenuLocked", IgnoreSpecialFormatting=true})
+
+		local stateText = GetDisplayName({ Text = "AwardMenuLocked", IgnoreSpecialFormatting = true })
 		if state == "UNLOCKED" then
-			stateText = GetDisplayName({Text = "Off", IgnoreSpecialFormatting=true})
+			stateText = GetDisplayName({ Text = "Off", IgnoreSpecialFormatting = true })
 			if GameState.MetaUpgradeState[cardName].Equipped then
-				stateText = GetDisplayName({Text = "On", IgnoreSpecialFormatting=true})
+				stateText = GetDisplayName({ Text = "On", IgnoreSpecialFormatting = true })
 			end
 		end
 
 
-		c.Text = GetDisplayName({Text = c.Text, IgnoreSpecialFormatting=true}) .. ", State: " .. stateText .. ", "
-		c.Text = c.Text .. GetDisplayName({Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting=true}) .. metaUpgradeData.Cost .. GetDisplayName({Text="IncreaseMetaUpgradeCard", IgnoreSpecialFormatting=true}) .. ", "
+		c.Text = GetDisplayName({ Text = c.Text, IgnoreSpecialFormatting = true }) .. ", State: " .. stateText .. ", "
+		c.Text = c.Text ..
+		GetDisplayName({ Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting = true }) ..
+		metaUpgradeData.Cost .. GetDisplayName({ Text = "IncreaseMetaUpgradeCard", IgnoreSpecialFormatting = true }) ..
+		", "
 		if state == "LOCKED" then
-			local costText = GetDisplayName({Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting=true}) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
+			local costText = GetDisplayName({ Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting = true }) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
 
 			local totalResourceCosts = MetaUpgradeCardData[button.CardName].ResourceCost
 			for resource, cost in pairs(totalResourceCosts) do
-				costText = costText .. " " .. cost .. " " .. GetDisplayName({Text = resource, IgnoreSpecialFormatting=true})
+				costText = costText ..
+				" " .. cost .. " " .. GetDisplayName({ Text = resource, IgnoreSpecialFormatting = true })
 			end
 			c.Text = c.Text .. costText
 		end
-		
+
 		CreateTextBox(c)
 		CreateTextBox({
 			Id = c.Id,
@@ -1222,38 +1204,44 @@ function CreateArcanaSpeechText(button, args, buttonArgs)
 	else
 		local cardTitle = button.CardName
 		local cardMultiplier = 1
-		if GameState.MetaUpgradeState[ cardTitle ].AdjacencyBonuses and GameState.MetaUpgradeState[ cardTitle ].AdjacencyBonuses.CustomMultiplier then
-			cardMultiplier = cardMultiplier + GameState.MetaUpgradeState[ cardTitle ].AdjacencyBonuses.CustomMultiplier
+		if GameState.MetaUpgradeState[cardTitle].AdjacencyBonuses and GameState.MetaUpgradeState[cardTitle].AdjacencyBonuses.CustomMultiplier then
+			cardMultiplier = cardMultiplier + GameState.MetaUpgradeState[cardTitle].AdjacencyBonuses.CustomMultiplier
 		end
 		local cardData = {}
 		if MetaUpgradeCardData[cardTitle].TraitName then
-			cardData = GetProcessedTraitData({ Unit = CurrentRun.Hero, TraitName = MetaUpgradeCardData[cardTitle].TraitName , Rarity = TraitRarityData.RarityUpgradeOrder[ GetMetaUpgradeLevel( cardTitle )], CustomMultiplier = cardMultiplier })
-			local nextLevelCardData = GetProcessedTraitData({ Unit = CurrentRun.Hero, TraitName = MetaUpgradeCardData[cardTitle].TraitName , Rarity = TraitRarityData.RarityUpgradeOrder[ GetMetaUpgradeLevel( cardTitle ) + 1], CustomMultiplier = cardMultiplier })
-			SetTraitTextData( cardData, { ReplacementTraitData = nextLevelCardData })
+			cardData = GetProcessedTraitData({ Unit = CurrentRun.Hero, TraitName = MetaUpgradeCardData[cardTitle]
+			.TraitName, Rarity = TraitRarityData.RarityUpgradeOrder[GetMetaUpgradeLevel(cardTitle)], CustomMultiplier =
+			cardMultiplier })
+			local nextLevelCardData = GetProcessedTraitData({ Unit = CurrentRun.Hero, TraitName = MetaUpgradeCardData
+			[cardTitle].TraitName, Rarity = TraitRarityData.RarityUpgradeOrder[GetMetaUpgradeLevel(cardTitle) + 1], CustomMultiplier =
+			cardMultiplier })
+			SetTraitTextData(cardData, { ReplacementTraitData = nextLevelCardData })
 		end
 		if TraitData[MetaUpgradeCardData[cardTitle].TraitName].CustomUpgradeText then
 			cardTitle = TraitData[MetaUpgradeCardData[cardTitle].TraitName].CustomUpgradeText
 		end
-		
-			local costText = ""
-			if CanUpgradeMetaUpgrade( button.CardName ) then 
+
+		local costText = ""
+		if CanUpgradeMetaUpgrade(button.CardName) then
 			local state = "HIDDEN"
 			if buttonArgs.CardState then
 				state = buttonArgs.CardState
 			else
 				if GameState.MetaUpgradeState[button.CardName].Unlocked then
 					state = "UNLOCKED"
-				elseif HasNeighboringUnlockedCards( buttonArgs.Row, buttonArgs.Column ) or (buttonArgs.Row == 1 and buttonArgs.Column == 1) then
+				elseif HasNeighboringUnlockedCards(buttonArgs.Row, buttonArgs.Column) or (buttonArgs.Row == 1 and buttonArgs.Column == 1) then
 					state = "LOCKED"
 				end
 			end
 
 			if state == "UNLOCKED" then
-				costText = GetDisplayName({Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting=true}) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
+				costText = GetDisplayName({ Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting = true }) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
 
-				local totalResourceCosts = MetaUpgradeCardData[button.CardName].UpgradeResourceCost[GetMetaUpgradeLevel( button.CardName )]
+				local totalResourceCosts = MetaUpgradeCardData[button.CardName].UpgradeResourceCost
+				[GetMetaUpgradeLevel(button.CardName)]
 				for resource, cost in pairs(totalResourceCosts) do
-					costText = costText .. " " .. cost .. " " .. GetDisplayName({Text = resource, IgnoreSpecialFormatting=true})
+					costText = costText ..
+					" " .. cost .. " " .. GetDisplayName({ Text = resource, IgnoreSpecialFormatting = true })
 				end
 			end
 		end
@@ -1265,7 +1253,7 @@ function CreateArcanaSpeechText(button, args, buttonArgs)
 		c.LuaValue = cardData
 		CreateTextBox({
 			Id = c.Id,
-			Text = GetDisplayName({Text = args.Text, IgnoreSpecialFormatting=true}) .. ", " .. costText,
+			Text = GetDisplayName({ Text = args.Text, IgnoreSpecialFormatting = true }) .. ", " .. costText,
 			SkipDraw = true,
 			SkipWrap = true,
 			Color = Color.Transparent
@@ -1296,7 +1284,7 @@ end
 
 function OnCodexPress()
 	if IsScreenOpen("TraitTrayScreen") then
-		for k,_ in pairs(ActiveScreens) do
+		for k, _ in pairs(ActiveScreens) do
 			if k ~= "TraitTrayScreen" then
 				return
 			end
@@ -1312,14 +1300,18 @@ function OnCodexPress()
 				if CurrentRun.CurrentRoom.Store ~= nil then
 					if NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) ~= 0 then
 						if CurrentRun.CurrentRoom.Store.SpawnedStoreItems then
-							for k,v in ipairs(CurrentRun.CurrentRoom.Store.SpawnedStoreItems) do
-								table.insert(rewardsTable, {IsShopItem=true, Name=v.Name, ObjectId=v.ObjectId, ResourceCosts = v.ResourceCosts})
+							for k, v in ipairs(CurrentRun.CurrentRoom.Store.SpawnedStoreItems) do
+								table.insert(rewardsTable,
+									{ IsShopItem = true, Name = v.Name, ObjectId = v.ObjectId, ResourceCosts = v
+									.ResourceCosts })
 								blockedIds[v.ObjectId] = true
 							end
 						end
 						if MapState.SurfaceShopItems then
-							for k,v in ipairs(MapState.SurfaceShopItems) do
-								table.insert(rewardsTable, {IsShopItem=true, Name=v.Name, ObjectId=v.ObjectId, ResourceCosts = v.ResourceCosts})
+							for k, v in ipairs(MapState.SurfaceShopItems) do
+								table.insert(rewardsTable,
+									{ IsShopItem = true, Name = v.Name, ObjectId = v.ObjectId, ResourceCosts = v
+									.ResourceCosts })
 								blockedIds[v.ObjectId] = true
 							end
 						end
@@ -1327,34 +1319,38 @@ function OnCodexPress()
 				end
 			end
 			local t = ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects), blockedIds)
-			for k,v in pairs(t) do
+			for k, v in pairs(t) do
 				table.insert(rewardsTable, v)
 			end
 			local currentRoom = CurrentRun.CurrentRoom
-			if currentRoom.FishingPointId ~= nil and IsUseable({Id = currentRoom.FishingPointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Name="Fish", ObjectId=currentRoom.FishingPointId})
+			if currentRoom.FishingPointId ~= nil and IsUseable({ Id = currentRoom.FishingPointId }) then
+				table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Fish", ObjectId = currentRoom
+				.FishingPointId })
 			end
 			if currentRoom.HarvestPointIds ~= nil and #currentRoom.HarvestPointIds > 0 then
 				for k, point in pairs(currentRoom.HarvestPointIds) do
-					if IsUseable({Id = point.Id}) then
-						table.insert(rewardsTable, {IsResourceHarvest=true, Name="Herb", ObjectId=point.Id})
+					if IsUseable({ Id = point.Id }) then
+						table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Herb", ObjectId = point.Id })
 					end
 				end
 			end
-			if currentRoom.PickaxePointId ~= nil and IsUseable({Id = currentRoom.PickaxePointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Name="Pickaxe", ObjectId=currentRoom.PickaxePointId})
+			if currentRoom.PickaxePointId ~= nil and IsUseable({ Id = currentRoom.PickaxePointId }) then
+				table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Pickaxe", ObjectId = currentRoom
+				.PickaxePointId })
 			end
-			if currentRoom.ShovelPointId ~= nil and IsUseable({Id = currentRoom.ShovelPointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Name="Shovel", ObjectId=currentRoom.ShovelPointId})
+			if currentRoom.ShovelPointId ~= nil and IsUseable({ Id = currentRoom.ShovelPointId }) then
+				table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Shovel", ObjectId = currentRoom
+				.ShovelPointId })
 			end
-			if currentRoom.ExorcismPointId ~= nil and IsUseable({Id = currentRoom.ExorcismPointId}) then
-				table.insert(rewardsTable, {IsResourceHarvest=true, Name="Tablet", ObjectId=currentRoom.ExorcismPointId})
-			end 
+			if currentRoom.ExorcismPointId ~= nil and IsUseable({ Id = currentRoom.ExorcismPointId }) then
+				table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Tablet", ObjectId = currentRoom
+				.ExorcismPointId })
+			end
 			if GetIdsByType({ Name = "FieldsRewardCage" }) then
-				for k,v in ipairs(GetIdsByType({ Name = "FieldsRewardCage" })) do
+				for k, v in ipairs(GetIdsByType({ Name = "FieldsRewardCage" })) do
 					local name = ""
 
-					local ids = GetClosestIds({ Id = v, DestinationName = "Standing", Distance=1})
+					local ids = GetClosestIds({ Id = v, DestinationName = "Standing", Distance = 1 })
 					for _, id in pairs(ids) do
 						if id ~= 40000 and id ~= v then
 							if LootObjects[id] then
@@ -1362,18 +1358,18 @@ function OnCodexPress()
 							end
 						end
 					end
-					table.insert(rewardsTable, {Name=name, ObjectId = v})
+					table.insert(rewardsTable, { Name = name, ObjectId = v })
 				end
 			end
 			if MapState.OptionalRewards then
-				for k,v in pairs(MapState.OptionalRewards) do
-					table.insert(rewardsTable, {IsOptionalReward = true, Name=v.Name, ObjectId=k})
+				for k, v in pairs(MapState.OptionalRewards) do
+					table.insert(rewardsTable, { IsOptionalReward = true, Name = v.Name, ObjectId = k })
 				end
 			end
 		end
 
 		local tempTable = {}
-		for k,v in pairs(rewardsTable) do
+		for k, v in pairs(rewardsTable) do
 			if v.ObjectId == nil or IsUseable({ Id = v.ObjectId }) then
 				tempTable[k] = v
 			end
@@ -1390,8 +1386,8 @@ function OnCodexPress()
 end
 
 function OnAdvancedTooltipPress()
-	if IsEmpty( ActiveScreens ) then
-		if not IsEmpty( MapState.CombatUIHide ) or not IsInputAllowed({}) then
+	if IsEmpty(ActiveScreens) then
+		if not IsEmpty(MapState.CombatUIHide) or not IsInputAllowed({}) then
 			-- If no screen is open, controlled entirely by input status
 			return
 		end
@@ -1402,7 +1398,7 @@ function OnAdvancedTooltipPress()
 		rewardsTable = ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
 		if TableLength(rewardsTable) > 0 then
 			if not IsEmpty(ActiveScreens.TraitTrayScreen) then
-					thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
+				thread(TraitTrayScreenClose, ActiveScreens.TraitTrayScreen)
 			end
 			OpenRewardMenu(rewardsTable)
 		end
@@ -1424,7 +1420,7 @@ function wrap_TraitTrayScreenShowCategory(baseFunc, screen, categoryIndex, args)
 end
 
 function override_SpawnStoreItemInWorld(itemData, kitId)
-    local spawnedItem = nil
+	local spawnedItem = nil
 	if itemData.Name == "WeaponUpgradeDrop" then
 		spawnedItem = CreateWeaponLoot({
 			SpawnPoint = kitId,
@@ -1486,7 +1482,8 @@ function override_SpawnStoreItemInWorld(itemData, kitId)
 			spawnedItem.IconPath = spawnedItem.TextIconPath or spawnedItem.IconPath
 			table.insert(CurrentRun.CurrentRoom.Store.SpawnedStoreItems,
 				--MOD START
-				{ KitId = kitId, ObjectId = spawnedItem.ObjectId, ResourceCosts = spawnedItem.ResourceCosts, Name = itemData.Name })
+				{ KitId = kitId, ObjectId = spawnedItem.ObjectId, ResourceCosts = spawnedItem.ResourceCosts, Name =
+				itemData.Name })
 			--MOD END
 		else
 			MapState.SurfaceShopItems = MapState.SurfaceShopItems or {}
@@ -1503,48 +1500,50 @@ function wrap_MetaUpgradeCardAction(screen, button)
 	local cardName = selectedButton.CardName
 	local metaUpgradeData = MetaUpgradeCardData[cardName]
 
-	CreateArcanaSpeechText(selectedButton, { Id = selectedButton.Id,
+	CreateArcanaSpeechText(selectedButton, {
+		Id = selectedButton.Id,
 		Text = metaUpgradeData.Name,
 		SkipDraw = true,
 		Color = Color.Transparent,
 		UseDescription = true,
 		LuaKey = "TooltipData",
 		LuaValue = selectedButton.TraitData or {},
-	}, {CardState = selectedButton.CardState})
-
+	}, { CardState = selectedButton.CardState })
 end
 
 function wrap_UpdateMetaUpgradeCardCreateTextBox(baseFunc, screen, row, column, args)
-    if args.SkipDraw and not args.SkipWrap then
-        if args.LuaKey == nil then
-            return
-        end
-        local button = screen.Components[GetMetaUpgradeKey( row, column )]
+	if args.SkipDraw and not args.SkipWrap then
+		if args.LuaKey == nil then
+			return
+		end
+		local button = screen.Components[GetMetaUpgradeKey(row, column)]
 
-        CreateArcanaSpeechText(button, args, {Row=row, Column=column})
-        return nil
-    else
-        return baseFunc(args, screen, row, column, args)
-    end
+		CreateArcanaSpeechText(button, args, { Row = row, Column = column })
+		return nil
+	else
+		return baseFunc(args, screen, row, column, args)
+	end
 end
 
 function wrap_UpdateMetaUpgradeCard(screen, row, column)
 	local components = screen.Components
 	local button = components.MemCostModule
-	if button.Id and MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1 ] then
-		local nextCostData = MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1 ].ResourceCost
-		local nextMetaUpgradeLevel = MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1 ]
+	if button.Id and MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1] then
+		local nextCostData = MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1]
+		.ResourceCost
+		local nextMetaUpgradeLevel = MetaUpgradeCostData.MetaUpgradeLevelData[GetCurrentMetaUpgradeLimitLevel() + 1]
 
-		local costText = GetDisplayName({Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting=true}) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
+		local costText = GetDisplayName({ Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting = true }) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
 
 		for resource, cost in pairs(nextCostData) do
-			costText = costText .. " " .. cost .. " " .. GetDisplayName({Text = resource, IgnoreSpecialFormatting=true})
+			costText = costText .. " " .. cost .. " " .. GetDisplayName({ Text = resource, IgnoreSpecialFormatting = true })
 		end
 
-		DestroyTextBox({Id = button.Id})
+		DestroyTextBox({ Id = button.Id })
 		CreateTextBox({
 			Id = button.Id,
-			Text = GetDisplayName({Text="IncreaseMetaUpgradeCard", IgnoreSpecialFormatting=true}) .. ", " .. costText,
+			Text = GetDisplayName({ Text = "IncreaseMetaUpgradeCard", IgnoreSpecialFormatting = true }) ..
+			", " .. costText,
 			SkipDraw = true,
 			Color = Color.Transparent
 		})
@@ -1553,13 +1552,16 @@ function wrap_UpdateMetaUpgradeCard(screen, row, column)
 			Text = "IncreaseMetaUpgradeCard",
 			SkipDraw = true,
 			Color = Color.Transparent,
-			UseDescription = true, LuaKey = "TempTextData", LuaValue = { Amount = nextMetaUpgradeLevel.CostIncrease}
+			UseDescription = true,
+			LuaKey = "TempTextData",
+			LuaValue = { Amount = nextMetaUpgradeLevel.CostIncrease }
 		})
 	else
-		DestroyTextBox({Id = button.Id})
+		DestroyTextBox({ Id = button.Id })
 		CreateTextBox({
 			Id = button.Id,
-			Text = GetDisplayName({Text="IncreaseMetaUpgradeCard", IgnoreSpecialFormatting=true}) .. ", " .. GetDisplayName({Text="Max_MetaUpgrade", IgnoreSpecialFormatting=true}),
+			Text = GetDisplayName({ Text = "IncreaseMetaUpgradeCard", IgnoreSpecialFormatting = true }) ..
+			", " .. GetDisplayName({ Text = "Max_MetaUpgrade", IgnoreSpecialFormatting = true }),
 			SkipDraw = true,
 			Color = Color.Transparent
 		})
@@ -1567,36 +1569,503 @@ function wrap_UpdateMetaUpgradeCard(screen, row, column)
 end
 
 function wrap_OpenGraspLimitAcreen()
-    local components = ActiveScreens.GraspLimitLayout.Components
+	local components = ActiveScreens.GraspLimitLayout.Components
 
-    local buttonKey = "GraspReadUIButton"
-    components[buttonKey] = CreateScreenComponent({
-        Name="ButtonDefault",
-        Group="Combat_Menu_TraitTray",
-        X = 600,
-        Y = 100
-    })
-    -- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
-    AttachLua({ Id = components[buttonKey].Id, Table =components[buttonKey] })
+	local buttonKey = "GraspReadUIButton"
+	components[buttonKey] = CreateScreenComponent({
+		Name = "ButtonDefault",
+		Group = "Combat_Menu_TraitTray",
+		X = 600,
+		Y = 100
+	})
+	-- components[buttonKey].OnMouseOverFunctionName = "MouseOver"
+	AttachLua({ Id = components[buttonKey].Id, Table = components[buttonKey] })
 
-    CreateTextBox({
-        Id = components[buttonKey].Id,
-        Text = "MetaUpgradeTable_UnableToEquip",
-        UseDescription = true,
-    })
+	CreateTextBox({
+		Id = components[buttonKey].Id,
+		Text = "MetaUpgradeTable_UnableToEquip",
+		UseDescription = true,
+	})
 
-    thread(function()
-        wait(0.02)
-        TeleportCursor({DestinationId=components[buttonKey].Id})
-    end)
+	thread(function()
+		wait(0.02)
+		TeleportCursor({ DestinationId = components[buttonKey].Id })
+	end)
 end
 
+function wrap_GhostAdminDisplayCategory(screen, button)
+	local category = screen.ItemCategories[button.CategoryIndex]
+	local slotName = category.Name
 
 
-function sjson_Chronos(data) 
-	for k,v in ipairs(data.Projectiles) do
-			if v.Name == "ChronosCircle" or v.Name == "ChronosCircleInverted" then
-				v.Damage = 50
+	local availableItems = {}
+	local boughtItems = {}
+
+	CurrentRun.ViewableWorldUpgrades = CurrentRun.ViewableWorldUpgrades or {}
+	for i, cosmeticName in ipairs(screen.ItemCategories[button.CategoryIndex]) do
+		local cosmeticData = WorldUpgradeData[cosmeticName]
+		if GhostAdminAllowViewItem(screen, category, cosmeticData) then
+			if GameState.WorldUpgradesAdded[cosmeticName] and not cosmeticData.Repeatable then
+				table.insert(boughtItems, cosmeticData)
+			else
+				table.insert(availableItems, cosmeticData)
 			end
+		end
+	end
+
+	local currentIndex = 0
+	for k, v in pairs(availableItems) do
+		currentIndex = currentIndex + 1
+
+		local purchaseButtonKey = "PurchaseButton" .. currentIndex
+		local button = screen.Components[purchaseButtonKey]
+
+		local name = v.Name
+		local displayName = GetDisplayName({ Text = name, IgnoreSpecialFormatting = true })
+
+		local itemNameFormat = ShallowCopyTable(screen.ItemAvailableAffordableNameFormat)
+		itemNameFormat.Id = button.Id
+
+		local costText = GetDisplayName({ Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting = true }) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
+
+		for k, v in pairs(v.Cost) do
+			costText = costText .. " " .. v .. " " .. GetDisplayName({ Text = k, IgnoreSpecialFormatting = true }) .. ","
+		end
+		costText = costText:sub(1, -2) --remove final comma
+
+		itemNameFormat.Text = displayName .. " " .. costText
+
+		DestroyTextBox({ Id = button.Id })
+		CreateTextBox(itemNameFormat)
+
+		-- Hidden description for tooltip
+		CreateTextBox({
+			Id = button.Id,
+			Text = name,
+			UseDescription = true,
+			Color = Color.Transparent,
+			LuaKey = "TooltipData",
+			LuaValue = v,
+		})
+	end
+
+	for k, v in pairs(boughtItems) do
+		currentIndex = currentIndex + 1
+
+		local purchaseButtonKey = "PurchaseButton" .. currentIndex
+		local button = screen.Components[purchaseButtonKey]
+
+		local name = v.Name
+		local displayName = GetDisplayName({ Text = name, IgnoreSpecialFormatting = true })
+
+		local itemNameFormat = ShallowCopyTable(screen.ItemAvailableAffordableNameFormat)
+		itemNameFormat.Id = button.Id
+
+		itemNameFormat.Text = displayName ..
+		", ," .. GetDisplayName({ Text = "On", IgnoreSpecialFormatting = true }) .. ", ,"
+
+		DestroyTextBox({ Id = button.Id })
+		CreateTextBox(itemNameFormat)
+
+		-- Hidden description for tooltip
+		CreateTextBox({
+			Id = button.Id,
+			Text = name,
+			UseDescription = true,
+			Color = Color.Transparent,
+			LuaKey = "TooltipData",
+			LuaValue = v,
+		})
+	end
+end
+
+function override_GhostAdminScreenRevealNewItemsPresentation(screen, button)
+	AddInputBlock({ Name = "GhostAdminScreenRevealNewItemspResentation" })
+
+	local components = screen.Components
+
+	-- Reveal new items
+	--for itemNum, item in ipairs( screen.AvailableItems ) do
+	for itemNum = screen.ScrollOffset, screen.ScrollOffset + screen.ItemsPerPage do
+		local item = screen.AvailableItems[itemNum]
+		if item ~= nil and not GameState.WorldUpgradesRevealed[item.Name] then
+			local purchaseButtonKey = "PurchaseButton" .. itemNum
+			SetAlpha({ Id = components[purchaseButtonKey].Id, Fraction = 0, Duration = 0 })
+			local iconKey = "Icon" .. itemNum
+			SetAlpha({ Id = components[iconKey].Id, Fraction = 0, Duration = 0 })
+			local newIconKey = "NewIcon" .. itemNum
+			SetAlpha({ Id = components[newIconKey].Id, Fraction = 0, Duration = 0 })
+		end
+	end
+	local incantationsRevealed = false
+	for itemNum = screen.ScrollOffset, screen.ScrollOffset + screen.ItemsPerPage do
+		local item = screen.AvailableItems[itemNum]
+		if item ~= nil and not GameState.WorldUpgradesRevealed[item.Name] then
+			local purchaseButtonKey = "PurchaseButton" .. itemNum
+			ModifyTextBox({ Id = components[purchaseButtonKey].Id, FadeOpacity = 0.0, FadeTarget = 1.0, FadeDuration = 0.05 })
+			SetAlpha({ Id = components[purchaseButtonKey].Id, Fraction = 1, Duration = 0 })
+			SetAnimation({ Name = "CriticalItemShopButtonReveal", DestinationId = components[purchaseButtonKey].Id, OffsetX = 0, })
+
+			thread(PlayVoiceLines, item.OfferedVoiceLines, true)
+
+			local iconKey = "Icon" .. itemNum
+			if components[iconKey] ~= nil then
+				SetAlpha({ Id = components[iconKey].Id, Fraction = 1, Duration = 0.05 })
+			end
+			local newIconKey = "NewIcon" .. itemNum
+			if components[newIconKey] ~= nil then
+				SetAlpha({ Id = components[newIconKey].Id, Fraction = 1, Duration = 0.05 })
+			end
+			CurrentRun.WorldUpgradesRevealed[item.Name] = true
+			GameState.WorldUpgradesRevealed[item.Name] = true
+			incantationsRevealed = true
+			-- wait( 0.9 )
+		end
+	end
+	if incantationsRevealed then
+		thread(PlayVoiceLines, HeroVoiceLines.CauldronSpellDiscoveredVoiceLines, true)
+	end
+	wait(0.2) -- Need to wait for last reveal animation to fully finish
+	RemoveInputBlock({ Name = "GhostAdminScreenRevealNewItemspResentation" })
+end
+
+function wrap_MarketScreenDisplayCategory(screen, categoryIndex)
+	local components = screen.Components
+	local category = screen.ItemCategories[categoryIndex]
+
+	local currentItemIndex = 0
+
+	local items = CurrentRun.MarketItems[screen.ActiveCategoryIndex]
+	for itemIndex, item in ipairs(items) do
+		if not item.SoldOut and ResourceData[item.BuyName] ~= nil then
+			local buyResourceData = ResourceData[item.BuyName]
+			item.LeftDisplayName = item.BuyName
+			item.LeftDisplayAmount = item.BuyAmount
+			local costDisplay = item.Cost
+			local costText = "ResourceCost"
+			if category.FlipSides then
+				for resourceName, resourceAmount in pairs(item.Cost) do
+					buyResourceData = ResourceData[resourceName]
+					item.LeftDisplayName = resourceName
+					item.LeftDisplayAmount = resourceAmount
+					costDisplay = {}
+					costDisplay[item.BuyName] = item.BuyAmount
+					costText = "ResourceCostSelling"
+					break
+				end
+				if buyResourceData == nil then
+					-- Back compat for removed resources
+					break
+				end
+			end
+
+			item.Showing = true
+			if not HasResources(item.Cost) then
+				if category.HideUnaffordable then
+					item.Showing = false
+				end
+			end
+
+			if item.Showing then
+				currentItemIndex = currentItemIndex + 1
+				local purchaseButtonKey = "PurchaseButton" .. currentItemIndex
+				local itemNameFormat = screen.ItemNameFormat
+				itemNameFormat.Id = components[purchaseButtonKey].Id
+
+				local displayName = GetDisplayName({ Text = item.LeftDisplayName, IgnoreSpecialFormatting = true }) ..
+				" * " .. item.LeftDisplayAmount
+
+				local currentAmount = GameState.Resources[buyResourceData.Name] or 0
+
+				local price = ""
+
+				if category.FlipSides then
+					price = GetDisplayName({ Text = "MarketScreen_SellingHeader" }) ..
+					": +" ..
+					costDisplay.MetaCurrency ..
+					" " .. GetDisplayName({ Text = "MetaCurrency", IgnoreSpecialFormatting = true })
+				else
+					price = GetDisplayName({ Text = "MarketScreen_BuyingHeader", IgnoreSpecialFormatting = true }) ..
+					": " ..
+					costDisplay.MetaCurrency ..
+					" " .. GetDisplayName({ Text = "MetaCurrency", IgnoreSpecialFormatting = true })
+				end
+
+
+				itemNameFormat.Text = displayName ..
+				" " ..
+				GetDisplayName({ Text = "Inventory", IgnoreSpecialFormatting = true }) ..
+				": " .. currentAmount .. ", " .. price
+				DestroyTextBox({ Id = components[purchaseButtonKey].Id })
+				CreateTextBox(itemNameFormat)
+			end
+		end
+	end
+end
+
+function override_CreateSurfaceShopButtons(screen)
+	local itemLocationStartY = screen.ShopItemStartY
+	local itemLocationYSpacer = screen.ShopItemSpacerY
+	local itemLocationMaxY = itemLocationStartY + 4 * itemLocationYSpacer
+
+	local itemLocationStartX = screen.ShopItemStartX
+	local itemLocationXSpacer = screen.ShopItemSpacerX
+	local itemLocationMaxX = itemLocationStartX + 1 * itemLocationXSpacer
+
+	local itemLocationTextBoxOffset = 380
+
+	local itemLocationX = itemLocationStartX
+	local itemLocationY = itemLocationStartY
+
+	local components = screen.Components
+
+	local numButtons = StoreData.WorldShop.MaxOffers
+	if numButtons == nil then
+		numButtons = 0
+		for i, groupData in pairs(StoreData.WorldShop.GroupsOf) do
+			numButtons = numButtons + groupData.Offers
+		end
+	end
+
+	local firstUseable = false
+	for itemIndex = 1, numButtons do
+		local upgradeData = CurrentRun.CurrentRoom.Store.StoreOptions[itemIndex]
+
+		if upgradeData ~= nil then
+			if not upgradeData.Processed then
+				if upgradeData.Type == "Consumable" then
+					if ConsumableData[upgradeData.Name] then
+						upgradeData = GetRampedConsumableData(ConsumableData[upgradeData.Name])
+					elseif LootData[upgradeData.Name] then
+						upgradeData = GetRampedConsumableData(LootData[upgradeData.Name])
+					end
+					upgradeData.Type = "Consumable"
+				elseif upgradeData.Type == "Boon" and upgradeData.Args.ForceLootName then
+					upgradeData.ResourceCosts = GetRampedConsumableData(ConsumableData.RandomLoot).ResourceCosts
+					upgradeData.Type = "Boon"
+					upgradeData.Name = upgradeData.Args.ForceLootName
+				end
+
+				upgradeData.RoomDelay = RandomInt(SurfaceShopData.DelayMin, SurfaceShopData.DelayMax)
+				local delayCostMultiplier = SurfaceShopData.DelayPriceDiscount[upgradeData.RoomDelay]
+				if not delayCostMultiplier then
+					delayCostMultiplier = SurfaceShopData.DelayPriceDiscount[#SurfaceShopData.DelayPriceDiscount]
+				end
+				upgradeData.SpeedUpResourceCosts = {}
+				local costMultiplier = 1 + (MetaUpgradeData.ShopPricesShrineUpgrade.ChangeValue - 1)
+				costMultiplier = costMultiplier *
+				GetTotalHeroTraitValue("StoreCostMultiplier", { IsMultiplier = true, Multiplicative = true })
+				for resourceName, resourceAmount in pairs(upgradeData.ResourceCosts) do
+					local baseCost = round(resourceAmount * costMultiplier)
+					local penaltyCost = round(resourceAmount * costMultiplier * SurfaceShopData.ImpatienceMultiplier)
+					upgradeData.ResourceCosts[resourceName] = round(baseCost * delayCostMultiplier)
+					upgradeData.SpeedUpResourceCosts[resourceName] = (penaltyCost - round(baseCost * delayCostMultiplier))
+				end
+
+
+				upgradeData.Processed = true
+			end
+
+			CurrentRun.CurrentRoom.Store.StoreOptions[itemIndex] = upgradeData
+			local tooltipData = upgradeData
+
+
+			local purchaseButtonKey = "PurchaseButton" .. itemIndex
+			local purchaseButton = DeepCopyTable(ScreenData.UpgradeChoice.PurchaseButton)
+			purchaseButton.X = itemLocationX
+			purchaseButton.Y = itemLocationY
+			components[purchaseButtonKey] = CreateScreenComponent(purchaseButton)
+
+			local highlight = ShallowCopyTable(ScreenData.UpgradeChoice.Highlight)
+			highlight.X = purchaseButton.X
+			highlight.Y = purchaseButton.Y
+			components[purchaseButtonKey .. "Highlight"] = CreateScreenComponent(highlight)
+			components[purchaseButtonKey].Highlight = components[purchaseButtonKey .. "Highlight"]
+
+			if GetSurfaceShopIcon(upgradeData) ~= nil then
+				local icon = DeepCopyTable(ScreenData.UpgradeChoice.Icon)
+				icon.X = itemLocationX + ScreenData.UpgradeChoice.IconOffsetX
+				icon.Y = itemLocationY + ScreenData.UpgradeChoice.IconOffsetY
+				icon.Animation = GetSurfaceShopIcon(upgradeData)
+				components["Icon" .. itemIndex] = CreateScreenComponent(icon)
+			end
+
+			local iconKey = "HermesSpeedUp" .. itemIndex
+			components[iconKey] = CreateScreenComponent({ Name = "BlankObstacle", X = itemLocationX - 313 + 560, Y =
+			itemLocationY - 50, Group = "Combat_Menu" })
+
+			if upgradeData.Purchased then
+				SetAnimation({ DestinationId = components[iconKey].Id, Name = "SurfaceShopBuyNowSticker" })
+			end
+
+			local itemBackingKey = "Backing" .. itemIndex
+			components[itemBackingKey] = CreateScreenComponent({ Name = "BlankObstacle", Group = "Combat_Menu", X =
+			itemLocationX + itemLocationTextBoxOffset, Y = itemLocationY })
+
+			local costString = "@GUI\\Icons\\Currency"
+			local targetResourceCosts = upgradeData.ResourceCosts
+			if upgradeData.Purchased then
+				targetResourceCosts = upgradeData.SpeedUpResourceCosts
+			end
+			if upgradeData.ResourceCosts then
+				local costAmount = GetResourceCost(targetResourceCosts, "Money")
+				costString = costAmount .. " " .. costString
+			end
+
+			local costColor = Color.CostAffordableShop
+			if not HasResources(targetResourceCosts) then
+				costColor = Color.CostUnaffordable
+			end
+			local button = components[purchaseButtonKey]
+			button.Screen = screen
+			AttachLua({ Id = button.Id, Table = button })
+			button.OnMouseOverFunctionName = "MouseOverSurfaceShopButton"
+			button.OnMouseOffFunctionName = "MouseOffSurfaceShopButton"
+			button.OnPressedFunctionName = "HandleSurfaceShopAction"
+			if not firstUseable then
+				TeleportCursor({ OffsetX = itemLocationX, OffsetY = itemLocationY, ForceUseCheck = true })
+				firstUseable = true
+			end
+
+			SetInteractProperty({ DestinationId = components[purchaseButtonKey].Id, Property = "TooltipOffsetX", Value =
+			ScreenData.UpgradeChoice.TooltipOffsetX })
+
+			local deliveryDuration = "PendingDeliveryDuration"
+			if upgradeData.Purchased then
+				deliveryDuration = "SpeedUpDelivery"
+			end
+
+			-- local title = GetDescriptionName({Text = })
+			local title = GetDisplayName({Text=GetSurfaceShopText(upgradeData)})
+			local cost = costString
+			local time = GetDisplayName({Text=deliveryDuration}):gsub("TempTextData.Delay", upgradeData.RoomDelay)
+
+			local titleText = DeepCopyTable(ScreenData.UpgradeChoice.DescriptionText)
+			titleText.Id = components[purchaseButtonKey].Id
+			titleText.Text = title .. ", " .. cost .. ", " .. time
+			titleText.UseDescription = false
+			CreateTextBoxWithFormat(titleText)
+
+			local descriptionText = DeepCopyTable(ScreenData.UpgradeChoice.DescriptionText)
+			descriptionText.Id = components[purchaseButtonKey].Id
+			descriptionText.OffsetY = 10
+			descriptionText.Text = GetSurfaceShopText( upgradeData )
+			descriptionText.LuaKey = "TooltipData"
+			descriptionText.LuaValue = upgradeData
+			CreateTextBoxWithFormat(descriptionText)
+
+			components[purchaseButtonKey].BlindAccessTitleText = title
+			components[purchaseButtonKey].BlindAccessCostText = cost
+			components[purchaseButtonKey].BlindAccessTimeText = time
+
+			components[purchaseButtonKey].Data = upgradeData
+			components[purchaseButtonKey].WeaponName = currentWeapon
+			components[purchaseButtonKey].Index = itemIndex
+
+			--these arent necessary for tolk, but other functions need it
+			local purchaseButtonDeliveryKey = "PurchaseButtonDelivery"..itemIndex
+			components[purchaseButtonDeliveryKey ] = CreateScreenComponent({ Name = "BlankObstacle", Group = "Combat_Menu", Scale = 1, X = itemLocationX, Y = itemLocationY })
+			CreateTextBox(MergeTables({ Id = components[purchaseButtonDeliveryKey].Id, Text = deliveryDuration,
+				FontSize = 18,
+				OffsetX = -245, OffsetY = 80,
+				Width = 720,
+				Color = Color.White,
+				Font = "LatoMedium",
+				ShadowBlur = 0, ShadowColor = {0,0,0,1}, ShadowOffset={0, 2},
+				Justification = "Left",
+				VerticalJustification = "BOTTOM",
+				LuaKey = "TempTextData",
+				LuaValue = { Delay = upgradeData.RoomDelay }
+			},LocalizationData.SellTraitScripts.ShopButton))
+
+			local purchaseButtonTitleKey = "PurchaseButtonTitle"..itemIndex
+			components[purchaseButtonTitleKey] = CreateScreenComponent({ Name = "BlankObstacle", Group = "Combat_Menu", X = itemLocationX, Y = itemLocationY })
+			local titleText = DeepCopyTable(ScreenData.UpgradeChoice.DescriptionText)
+			titleText.Id = components[purchaseButtonTitleKey].Id
+			titleText.Text = ""
+			CreateTextBoxWithFormat(titleText)
+
+			local purchaseButtonCostKey = "PurchaseButtonCost"..itemIndex
+			components[purchaseButtonCostKey] = CreateScreenComponent({ Name = "BlankObstacle", Group = "Combat_Menu", Scale = 1, X = itemLocationX, Y = itemLocationY })
+			
+			CreateTextBox(MergeTables({ Id = components[purchaseButtonCostKey].Id, Text = costString, OffsetX = 410, OffsetY = -50, FontSize = 28, Color = costColor, Font = "P22UndergroundSCMedium", Justification = "Right" },LocalizationData.SellTraitScripts.ShopButton))
+
+
+			if CurrentRun.CurrentRoom.Store.Buttons == nil then
+				CurrentRun.CurrentRoom.Store.Buttons = {}
+			end
+			table.insert(CurrentRun.CurrentRoom.Store.Buttons, components[purchaseButtonKey])
+		end
+		itemLocationX = itemLocationX + itemLocationXSpacer
+		if itemLocationX >= itemLocationMaxX then
+			itemLocationX = itemLocationStartX
+			itemLocationY = itemLocationY + itemLocationYSpacer
+		end
+	end
+	--[[
+if HeroHasTrait( "PanelRerollMetaUpgrade" ) then
+	local increment = 0
+	if CurrentRun.CurrentRoom.SpentRerolls then
+		increment = CurrentRun.CurrentRoom.SpentRerolls[CurrentRun.CurrentRoom.Store.Screen.Name] or 0
+	end
+	local cost = RerollCosts.Shop + increment
+
+	local color = Color.White
+	if CurrentRun.NumRerolls < cost or cost < 0 then
+		color = Color.CostUnaffordable
+	end
+	if cost > 0 then
+		components["RerollPanel"] = CreateScreenComponent({ Name = "ShopRerollButton", Scale = 1.0, Group = "Combat_Menu" })
+		Attach({ Id = components["RerollPanel"].Id, DestinationId = components.ShopBackground.Id, OffsetX = -200, OffsetY = 440 })
+		components["RerollPanel"].OnPressedFunctionName = "AttemptPanelReroll"
+		components["RerollPanel"].RerollFunctionName = "RerollStore"
+		components["RerollPanel"].Cost = cost
+		components["RerollPanel"].RerollColor = {48, 25, 83, 255}
+		components["RerollPanel"].RerollId = CurrentRun.CurrentRoom.Store.Screen.Name
+		CreateTextBox({ Id = components["RerollPanel"].Id, Text = "RerollCount", OffsetX = 28, OffsetY = -5,
+		ShadowColor = {0,0,0,1}, ShadowOffset={0,3}, OutlineThickness = 3, OutlineColor = {0,0,0,1},
+		FontSize = 28, Color = color, Font = "P22UndergroundSCHeavy", LuaKey = "TempTextData", LuaValue = { Amount = cost }})
+		SetInteractProperty({ DestinationId = components["RerollPanel"].Id, Property = "TooltipOffsetX", Value = 850 })
+		CreateTextBox({ Id = components["RerollPanel"].Id, Text = "MetaUpgradeRerollHint", Color = Color.Transparent, Font = "P22UndergroundSCHeavy", LuaKey = "TempTextData", LuaValue = { Amount = cost }})
+	end
+end
+]]
+end
+
+function wrap_HandleSurfaceShopAction(screen, button)
+	local upgradeData = button.Data
+	local costAmount = 0
+
+	local title = button.BlindAccessTitleText
+	local time = GetDisplayName({Text="SpeedUpDelivery"})
+
+	DestroyTextBox({Id = button.Id})
+	local costString = "@GUI\\Icons\\Currency"
+	if upgradeData.ResourceCosts then 
+		costAmount = GetResourceCost( upgradeData.SpeedUpResourceCosts, "Money")
+		costString = costAmount .. " " .. costString
+	end
+
+	local titleText = DeepCopyTable(ScreenData.UpgradeChoice.DescriptionText)
+	titleText.Id = button.Id
+	titleText.Text = title .. ", " .. costString .. ", " .. time
+	titleText.UseDescription = false
+	CreateTextBoxWithFormat(titleText)
+
+	local descriptionText = DeepCopyTable(ScreenData.UpgradeChoice.DescriptionText)
+	descriptionText.Id = button.Id
+	descriptionText.OffsetY = 10
+	descriptionText.Text = GetSurfaceShopText( upgradeData )
+	descriptionText.LuaKey = "TooltipData"
+	descriptionText.LuaValue = upgradeData
+	CreateTextBoxWithFormat(descriptionText)
+
+end
+
+function sjson_Chronos(data)
+	for k, v in ipairs(data.Projectiles) do
+		if v.Name == "ChronosCircle" or v.Name == "ChronosCircleInverted" then
+			v.Damage = 50
+		end
 	end
 end

@@ -15,22 +15,13 @@ Adds blind / low visibility accessibility features to Hades 2. Adapted from Pony
     * To access open the boon information then open the codex (this will work even if the codex is not unlocked), default controls are:
         * Gamepad: D-pad left then D-pad up
         * Keyboard: B then C
-* The ability to simplify the inventory menu to only show the name and amount of each resource held
-    * To access open the inventory then press the inventory button again, default controls are:
-        * Gamepad: D-pad right then D-pad right
-        * Keyboard: I then I
 * Final Boss's instant kill move instead deals 50 damage (Original creation by PonyWarrior)
 * The Arcana Card's descriptions, prices, and whether they are turned on or off are read in the shrine's menu
+* Multiple menus are adapted to provide more information when read TOLk (this includes the Inventory, Gift Menus, Planting Menus, Broker, Cauldron, and more)
 
 # TODO
 * flashback
-* cauldron
-* broker
-* gift menu
-* planting menu
 * tablet minigame
-* shrine of hermes menu
-* change inventory reading system to work better with vanilla inventory behaviors
 * subtitles
 * bug fixes
     * Shop not showing gatherable resources

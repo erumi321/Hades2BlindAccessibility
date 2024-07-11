@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Cauldron menu now reports more information when read by TOLk
+- Broker menu now reports more information when read by TOLk
+- Changed inventory to act more like vanilla game, gift menu and planting menu now report more information when read by TOLk as a side product 
+- Shrine of Hermes now reports more information when read by TOLk
+
 ## [0.2.0] - 2024-06-12
 
 ### Added

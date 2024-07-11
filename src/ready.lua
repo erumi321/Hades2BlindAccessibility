@@ -34,33 +34,18 @@ local function setupData()
 			BlockPause=true,
 			Name = "BlindAccesibilityStoreMenu"
 		},
-		BlindAccesibilityInventoryMenu = {
-			Components = {},
-			BlockPause=true,
-			Name = "BlindAccesibilityInventoryMenu"
-		}
 	})
-	ScreenData.InventoryScreen.ComponentData.ActionBar.Children.CloseButton.Data.MouseControlHotkeys = {"Cancel"}
-	ScreenData.InventoryScreen.ComponentData.ActionBar.Children.OpenAccessibleInventory = {
-		Graphic = "ContextualActionButton",
-		GroupName = "Combat_Menu_Overlay",
-		BottomOffset = UIData.ContextualButtonBottomOffset,
-		Data =
-		{
-			OnMouseOverFunctionName = "MouseOverContextualAction",
-			OnMouseOffFunctionName = "MouseOffContextualAction",
-			OnPressedFunctionName = "BlindAccessTryOpenSimplifiedInventory",
-			ControlHotkeys = { "Inventory", },
-			MouseControlHotkeys  = { "Inventory" },
-		},
-		Text = "",
-		TextArgs = UIData.ContextualButtonFormatRight,
-	}
 end
 
 OnControlPressed { "Inventory", function(triggerArgs)
 	OnInventoryPress()
 end }
+
+modutil.mod.Path.Wrap("InventoryScreenDisplayCategory", function(baseFunc, screen, categoryIndex, args)
+	local ret = baseFunc(screen, categoryIndex, args)
+	wrap_InventoryScreenDisplayCategory(screen, categoryIndex, args)
+	return ret
+end)
 
 modutil.mod.Path.Wrap("ExitDoorUnlockedPresentation", function(baseFunc, exitDoor)
 	local ret = baseFunc(exitDoor)
@@ -128,6 +113,36 @@ modutil.mod.Path.Wrap("ShipsSteeringWheelChoicePresentation", function(baseFunc,
 		OpenAssesDoorShowerMenu(CollapseTable(MapState.ShipWheels))
 	end)
 	return baseFunc(...)
+end)
+
+modutil.mod.Path.Wrap("GhostAdminDisplayCategory", function(baseFunc, screen, button)
+	local ret = baseFunc(screen, button)
+	
+	wrap_GhostAdminDisplayCategory(screen, button)
+
+	return ret
+end)
+
+modutil.mod.Path.Override("GhostAdminScreenRevealNewItemsPresentation", function(screen, button)
+	return override_GhostAdminScreenRevealNewItemsPresentation( screen, button )
+end)
+
+modutil.mod.Path.Wrap("MarketScreenDisplayCategory", function(baseFunc, screen, categoryIndex)
+	local ret = baseFunc(screen, categoryIndex)
+	wrap_MarketScreenDisplayCategory(screen, categoryIndex)
+	return ret
+end)
+
+modutil.mod.Path.Override("CreateSurfaceShopButtons", function(screen)
+	return override_CreateSurfaceShopButtons(screen)
+end)
+
+modutil.mod.Path.Context.Wrap("HandleSurfaceShopAction", function(screen, button)
+	modutil.mod.Path.Wrap("SwitchToSpeedupPresentation", function(baseFunc, ...) --we do this so that the wrap only happens if all of the inbuilt logic passes to purchase the item
+		wrap_HandleSurfaceShopAction(screen, button)
+		return baseFunc(...)
+	end)
+
 end)
 
 local projectilePath = rom.path.combine(rom.paths.Content, 'Game/Projectiles/EnemyProjectiles.sjson')
