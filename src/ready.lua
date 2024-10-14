@@ -145,6 +145,47 @@ modutil.mod.Path.Context.Wrap("HandleSurfaceShopAction", function(screen, button
 
 end)
 
+modutil.mod.Path.Context.Wrap("CreateKeepsakeIcon", function(screen, components, keepsakeArgs)
+	modutil.mod.Path.Wrap("CreateTextBox", function(baseFunc, args)
+		if args.ignoreWrap == true then
+			return baseFunc(args)
+		end
+		 wrap_CreateKeepsakeIconText(args, keepsakeArgs)
+		 return baseFunc(args)
+	end)
+
+end)
+
+modutil.mod.Path.Context.Wrap("CreateStoreButtons", function(screen)
+	modutil.mod.Path.Wrap("CreateTextBox", function(baseFunc, args)
+		return wrap_CreateStoreButtons(baseFunc, args)
+	end)
+end)
+
+modutil.mod.Path.Context.Wrap("CreateSpellButtons", function(screen)
+	modutil.mod.Path.Wrap("CreateTextBox", function(baseFunc, args)
+		return wrap_CreateSpellButtons(baseFunc, args)
+	end)
+end)
+
+modutil.mod.Path.Wrap("CreateTalentTreeIcons", function(baseFunc, screen, args)
+	local ret = baseFunc(screen, args)
+	wrap_CreateTalentTreeIcons(screen, args)
+	return ret
+end)
+
+modutil.mod.Path.Wrap("UpdateTalentButtons", function(baseFunc, screen, skipUsableCheck )
+	local ret = baseFunc(screen, skipUsableCheck)
+	wrap_UpdateTalentButtons(screen, skipUsableCheck)
+	return ret
+end)
+
+modutil.mod.Path.Context.Wrap("HighlightTalentButton", function( button )
+	modutil.mod.Path.Wrap("ModifyTextBox", function(baseFunc, args)
+		return nil
+	end)
+end)
+
 local projectilePath = rom.path.combine(rom.paths.Content, 'Game/Projectiles/EnemyProjectiles.sjson')
 
 sjson.hook(projectilePath, function(data)

@@ -134,7 +134,7 @@ function OpenAssesDoorShowerMenu(doors)
 	components.CloseButton = CreateScreenComponent({ Name = "ButtonClose", Group = "Asses_UI_Backing", Scale = 0.7 })
 	Attach({ Id = components.CloseButton.Id, DestinationId = components.ShopBackgroundDim.Id, OffsetX = 0, OffsetY = 440 })
 	components.CloseButton.OnPressedFunctionName = "BlindAccessCloseAssesDoorShowerScreen"
-	components.CloseButton.ControlHotkeys        = { "Cancel", }
+	components.CloseButton.ControlHotkeys        = { "Cancel" }
 	components.CloseButton.MouseControlHotkeys   = { "Cancel" }
 
 	SetScale({ Id = components.ShopBackgroundDim.Id, Fraction = 4 })
@@ -316,7 +316,6 @@ function CreateAssesDoorButtons(screen, doors)
 					" " .. CurrentRun.RemainingClockworkGoals
 				end
 
-
 				local args = { RoomData = door.Room }
 				local rewardOverrides = args.RoomData.RewardOverrides or {}
 				local encounterData = args.RoomData.Encounter or {}
@@ -334,6 +333,9 @@ function CreateAssesDoorButtons(screen, doors)
 					else
 						displayText = displayText .. " (Elite)"
 					end
+				end
+				if door.HealthCost and door.HealthCost ~= 0 then
+					displayText = displayText .. " -" .. door.HealthCost .. "{!Icons.Health}"
 				end
 			end
 			local buttonKey = "AssesResourceMenuButton" .. k
@@ -894,12 +896,6 @@ function CreateRewardButtons(screen, rewards)
 	end
 end
 
--- function MouseOver(screen, button)
--- 	--Does nothing just exists so that the OnMouseOver functionality of the modified UI script using TOLk interacts with the button
--- 	--without setting this the OnMouseover trigger is returned out of before TOLk is called
--- 	--Not needed if using the thunderstore version of TOLk compatability
--- end
-
 function rom.game.BlindAccessGoToReward(screen, button)
 	PlaySound({ Name = "/SFX/Menu Sounds/ContractorItemPurchase" })
 	rom.game.BlindAccessCloseRewardMenu(screen, button)
@@ -1168,8 +1164,7 @@ function CreateArcanaSpeechText(button, args, buttonArgs)
 		c.Text = GetDisplayName({ Text = c.Text, IgnoreSpecialFormatting = true }) .. ", State: " .. stateText .. ", "
 		c.Text = c.Text ..
 		GetDisplayName({ Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting = true }) ..
-		metaUpgradeData.Cost .. GetDisplayName({ Text = "IncreaseMetaUpgradeCard", IgnoreSpecialFormatting = true }) ..
-		", "
+		metaUpgradeData.Cost .. GetDisplayName({ Text = "IncreaseMetaUpgradeCard", IgnoreSpecialFormatting = true }) .. ", "
 		if state == "LOCKED" then
 			local costText = GetDisplayName({ Text = "CannotUseChaosWeaponUpgrade", IgnoreSpecialFormatting = true }) --cheating here, this is just "Requires: {Hammer Icon}" and we just remove the Hammer Icon
 
@@ -1301,8 +1296,12 @@ function OnCodexPress()
 					if NumUseableObjects(CurrentRun.CurrentRoom.Store.SpawnedStoreItems or MapState.SurfaceShopItems) ~= 0 then
 						if CurrentRun.CurrentRoom.Store.SpawnedStoreItems then
 							for k, v in ipairs(CurrentRun.CurrentRoom.Store.SpawnedStoreItems) do
+								local name = v.Name
+								if name == "StoreRewardRandomStack" then
+									name = "RandomPom"
+								end
 								table.insert(rewardsTable,
-									{ IsShopItem = true, Name = v.Name, ObjectId = v.ObjectId, ResourceCosts = v
+									{ IsShopItem = true, Name = name, ObjectId = v.ObjectId, ResourceCosts = v
 									.ResourceCosts })
 								blockedIds[v.ObjectId] = true
 							end
@@ -2060,6 +2059,234 @@ function wrap_HandleSurfaceShopAction(screen, button)
 	descriptionText.LuaValue = upgradeData
 	CreateTextBoxWithFormat(descriptionText)
 
+end
+
+function wrap_CreateKeepsakeIconText(textboxArgs, keepsakeArgs)
+	local upgradeData = keepsakeArgs.UpgradeData
+	local traitName = upgradeData.Gift
+	local traitData = nil
+	if HeroHasTrait(traitName) then
+		traitData = GetHeroTrait( traitName )
+	else
+		traitData = GetProcessedTraitData({ Unit = CurrentRun.Hero, TraitName = traitName, Rarity = GetRarityKey(GetKeepsakeLevel( traitName )) })
+	end
+	local rarityLevel = GetRarityValue( traitData.Rarity )
+	local titleArgs = DeepCopyTable(textboxArgs)
+	titleArgs.UseDescription = false
+	titleArgs.ignoreWrap = true
+	titleArgs.Text =  GetDisplayName({ Text = titleArgs.Text, IgnoreSpecialFormatting = true }) .. ", " .. ("{!Icons.AwardRank" .. rarityLevel .. "}")
+
+	CreateTextBox(titleArgs)
+end
+
+function wrap_CreateStoreButtons(baseFunc, args)
+	if args.LuaKey == "TooltipData" then --only the textbox being read and the Fated List notification has this
+		if args.Text == "TraitQuestItem" then --dont double up on title and cost for fated list notification
+			return baseFunc(args)
+		end
+		local upgradeData = args.LuaValue
+		local costString = "@GUI\\Icons\\Currency"
+		local costAmount = upgradeData.ResourceCosts["Money"] or 0
+
+		costString = costAmount .. "/" .. GetResourceAmount( "Money" ) .. " " .. costString
+
+		if upgradeData.HealthCost then
+			costString = upgradeData.HealthCost .. " / " .. CurrentRun.Hero.Health .. " @GUI\\Icons\\Life"
+		end
+
+		local titleText = DeepCopyTable( ScreenData.UpgradeChoice.TitleText )
+		titleText.Id = args.Id
+		titleText.Text = GetDisplayName({Text = GetTraitTooltip( args.LuaValue ), IgnoreSpecialFormatting = true}) .. " " .. costString
+		titleText.LuaKey = "TempTextData"
+		titleText.LuaValue = args.LuaValue
+		CreateTextBox( titleText )
+
+		return baseFunc(args)
+	end
+end
+
+function wrap_CreateSpellButtons(baseFunc, args)
+	if args.LuaKey == "TooltipData" and args.UseDescription then --only the textbox being read and the Fated List notification has this
+		local traitData = args.LuaValue
+		if traitData == nil or args.Text ~= GetTraitTooltip(traitData) then
+			return baseFunc(args)
+		end
+
+		local titleText = DeepCopyTable( ScreenData.UpgradeChoice.TitleText )
+		titleText.Id = args.Id
+		titleText.Text = args.Text
+		titleText.LuaKey = "TooltipData"
+		titleText.LuaValue = traitData
+		CreateTextBox( titleText )
+			
+		return baseFunc(args)
+	end
+
+	return baseFunc(args)
+end
+
+function wrap_CreateTalentTreeIcons(screen, args)
+	args = args or {}
+	local screenObstacle = args.ObstacleName or "BlankObstacle"
+	local components = screen.Components
+	local spellTalents = nil
+	if CurrentRun.Hero.SlottedSpell then
+		spellTalents = CurrentRun.Hero.SlottedSpell.Talents
+	end
+	if not spellTalents then
+		spellTalents = screen.TalentData
+	end
+	for i, column in ipairs( spellTalents ) do
+		for s, talent in pairs( spellTalents[i] ) do
+			talentObject = components["TalentObject"..i.."_"..s]
+			local hasPreRequisites = true
+			if talent.LinkFrom then
+				hasPreRequisites = false
+				for _, preReqIndex in pairs( talent.LinkFrom ) do
+					if components["TalentObject"..(i-1).."_"..preReqIndex].Data.Invested or components["TalentObject"..(i-1).."_"..preReqIndex].Data.QueuedInvested  then
+						-- if any are invested, this becomes valid
+						hasPreRequisites = true
+					end
+				end
+			end
+			if not hasPreRequisites and talent.QueuedInvested then
+				talent.QueuedInvested = nil		
+			end
+			local stateText = ""
+			if talent.Invested or talent.QueuedInvested then
+				stateText = GetDisplayName({ Text = "On", IgnoreSpecialFormatting = true }) 
+			elseif not talent.Invested then
+				if hasPreRequisites then
+					stateText = GetDisplayName({ Text = "Off", IgnoreSpecialFormatting = true }) .. ", " .. (CurrentRun.NumTalentPoints + 1) .. " " .. GetDisplayName({Text = "AdditionalTalentPointDisplay"})
+				else
+					stateText = GetDisplayName({Text = "AwardMenuLocked", IgnoreSpecialFormatting = true}) .. ", " .. (CurrentRun.NumTalentPoints + 1) .. " " .. GetDisplayName({Text = "AdditionalTalentPointDisplay"})
+				end
+			end
+			print(stateText)
+
+			local titleText = stateText .. ", " .. GetDisplayName({Text = talent.Name})
+			CreateTextBox({ 
+				Id = talentObject.Id,
+				Text = titleText,
+				OffsetX = 0, OffsetY = 0,
+				Font = "P22UndergroundSCHeavy",
+				Justification = "LEFT",
+				Color = Color.Transparent,
+			})
+			local newTraitData =  GetProcessedTraitData({ Unit = CurrentRun.Hero, TraitName = talent.Name, Rarity = talent.Rarity, ForBoonInfo = true })
+			newTraitData.ForBoonInfo = true
+			SetTraitTextData( newTraitData )
+			CreateTextBox({ 
+				Id = talentObject.Id,
+				Text = talent.Name,
+				OffsetX = 0, OffsetY = 0,
+				Font = "P22UndergroundSCHeavy",
+				Justification = "LEFT",
+				Color = Color.Transparent,
+				UseDescription = true,
+				LuaKey = "TooltipData", LuaValue = newTraitData
+			})
+
+			if talent.LinkTo then
+				local linkText = "→"
+				for k,v in pairs(talent.LinkTo) do
+					-- print((button.TalentColumn + 1) .."_"..v)
+					-- print(components.TalentIdsDictionary[(button.TalentColumn + 1) .."_"..v])
+					local linkedButton = components["TalentObject" .. (i + 1) .."_"..v]
+		
+					linkText = linkText .. GetDisplayName({Text = linkedButton.Data.Name}) .. ", "
+				end
+				linkText = linkText:sub(1, -3)
+				CreateTextBox({ 
+					Id = talentObject.Id,
+					Text = linkText,
+					OffsetX = 0, OffsetY = 0,
+					Font = "P22UndergroundSCHeavy",
+					Justification = "LEFT",
+					Color = Color.Transparent,
+				})
+			end
+		end
+	end
+end
+
+function wrap_UpdateTalentButtons(screen, skipUsableCheck)
+	local components = screen.Components
+	local firstUsable = skipUsableCheck
+
+	for i, column in ipairs( CurrentRun.Hero.SlottedSpell.Talents ) do
+		for s, talent in pairs( column ) do
+			local talentObject = components["TalentObject"..i.."_"..s]
+			DestroyTextBox({Id = talentObject.Id})
+			local talent = talentObject.Data
+			local hasPreRequisites = true
+			if talent.LinkFrom then
+				hasPreRequisites = false
+				for _, preReqIndex in pairs( talent.LinkFrom ) do
+					if components["TalentObject"..(i-1).."_"..preReqIndex].Data.Invested or components["TalentObject"..(i-1).."_"..preReqIndex].Data.QueuedInvested  then
+						-- if any are invested, this becomes valid
+						hasPreRequisites = true
+					end
+				end
+			end
+			if not hasPreRequisites and talent.QueuedInvested then
+				talent.QueuedInvested = nil		
+			end
+			local stateText = ""
+			if talent.Invested or talent.QueuedInvested then
+				stateText = GetDisplayName({ Text = "On", IgnoreSpecialFormatting = true })
+			elseif not talent.Invested then
+				if hasPreRequisites then
+					stateText = GetDisplayName({ Text = "Off", IgnoreSpecialFormatting = true }) .. ", " ..(CurrentRun.NumTalentPoints + 1) .. " " .. GetDisplayName({Text = "AdditionalTalentPointDisplay"})
+				else
+					stateText = GetDisplayName({Text = "AwardMenuLocked", IgnoreSpecialFormatting = true}) .. ", " .. (CurrentRun.NumTalentPoints + 1) .. " " .. GetDisplayName({Text = "AdditionalTalentPointDisplay"})  
+				end
+			end
+
+			local titleText = stateText .. ", " .. GetDisplayName({Text = talent.Name})
+			CreateTextBox({ 
+				Id = talentObject.Id,
+				Text = titleText,
+				OffsetX = 0, OffsetY = 0,
+				Font = "P22UndergroundSCHeavy",
+				Justification = "LEFT",
+				Color = Color.Transparent,
+			})
+			local newTraitData =  GetProcessedTraitData({ Unit = CurrentRun.Hero, TraitName = talent.Name, Rarity = talent.Rarity, ForBoonInfo = true })
+			newTraitData.ForBoonInfo = true
+			SetTraitTextData( newTraitData )
+			CreateTextBox({ 
+				Id = talentObject.Id,
+				Text = talent.Name,
+				OffsetX = 0, OffsetY = 0,
+				Font = "P22UndergroundSCHeavy",
+				Justification = "LEFT",
+				Color = Color.Transparent,
+				UseDescription = true,
+				LuaKey = "TooltipData", LuaValue = newTraitData
+			})
+
+			if talent.LinkTo then
+				local linkText = "→"
+				for k,v in pairs(talent.LinkTo) do
+					-- print((button.TalentColumn + 1) .."_"..v)
+					-- print(components.TalentIdsDictionary[(button.TalentColumn + 1) .."_"..v])
+					local linkedButton = components["TalentObject" .. (i + 1) .."_"..v]
+		
+					linkText = linkText .. GetDisplayName({Text = linkedButton.Data.Name}) .. ", "
+				end
+				linkText = linkText:sub(1, -3)
+				CreateTextBox({ 
+					Id = talentObject.Id,
+					Text = linkText,
+					OffsetX = 0, OffsetY = 0,
+					Font = "P22UndergroundSCHeavy",
+					Justification = "LEFT",
+					Color = Color.Transparent,
+				})
+			end
+		end
+	end
 end
 
 function sjson_Chronos(data)

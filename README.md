@@ -20,6 +20,9 @@ Adds blind / low visibility accessibility features to Hades 2. Adapted from Pony
 * Multiple menus are adapted to provide more information when read TOLk (this includes the Inventory, Gift Menus, Planting Menus, Broker, Cauldron, and more)
 
 # TODO
+* Chaos exit show damage number
+* Traps
+* Keepsake post-boss
 * flashback
 * tablet minigame
 * subtitles
@@ -28,3 +31,5 @@ Adds blind / low visibility accessibility features to Hades 2. Adapted from Pony
     * Door menu not always opening
     * Pom of power menu / single button menus not reading
     * Oceanus sealed doors
+    * Keepsake Names
+    * MetaCardPointsCommonBig

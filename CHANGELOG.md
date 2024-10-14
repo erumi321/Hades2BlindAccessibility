@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Keepsake menu reports more information when read by TOLk
+- Well of Charon menu reports more information when read by TOLk
+- Selene menu reports more information when read by TOLk
+- Path of Stars menu reports more information when read by TOLk
+
 ## [0.3.0] - 2024-07-11
 
 ### Added
