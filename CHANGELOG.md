@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2024-10-14
+
 ### Added
+
 - Keepsake menu reports more information when read by TOLk
 - Well of Charon menu reports more information when read by TOLk
 - Selene menu reports more information when read by TOLk
@@ -74,7 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Arcana Menu integration with TOLk screen reader
 - Final Boss instant kill move -> 50 damage
 
-[unreleased]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.3.0...HEAD
+[unreleased]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.3.1...HEAD
+[0.3.1]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.1.5...0.2.0
 [0.1.5]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.1.4...0.1.5
