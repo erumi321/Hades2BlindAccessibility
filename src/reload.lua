@@ -1322,28 +1322,41 @@ function OnCodexPress()
 				table.insert(rewardsTable, v)
 			end
 			local currentRoom = CurrentRun.CurrentRoom
-			if currentRoom.FishingPointId ~= nil and IsUseable({ Id = currentRoom.FishingPointId }) then
-				table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Fish", ObjectId = currentRoom
-				.FishingPointId })
-			end
-			if currentRoom.HarvestPointIds ~= nil and #currentRoom.HarvestPointIds > 0 then
-				for k, point in pairs(currentRoom.HarvestPointIds) do
-					if IsUseable({ Id = point.Id }) then
-						table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Herb", ObjectId = point.Id })
+			if currentRoom.ShovelPointChoices and #currentRoom.ShovelPointChoices > 0 then
+				for i, id in pairs(currentRoom.ShovelPointChoices) do
+					if IsUseable({Id = id}) then
+						table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Shovel", ObjectId = id })
 					end
 				end
 			end
-			if currentRoom.PickaxePointId ~= nil and IsUseable({ Id = currentRoom.PickaxePointId }) then
-				table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Pickaxe", ObjectId = currentRoom
-				.PickaxePointId })
+			if currentRoom.PickaxePointChoices and #currentRoom.PickaxePointChoices > 0 then
+				for i, id in pairs(currentRoom.PickaxePointChoices) do
+					if IsUseable({Id = id}) then
+						table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Pickaxe", ObjectId = id })
+					end
+				end
 			end
-			if currentRoom.ShovelPointId ~= nil and IsUseable({ Id = currentRoom.ShovelPointId }) then
-				table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Shovel", ObjectId = currentRoom
-				.ShovelPointId })
+			if currentRoom.ExorcismPointChoices and #currentRoom.ExorcismPointChoices > 0 then
+				for i, id in pairs(currentRoom.ExorcismPointChoices) do
+					if IsUseable({Id = id}) then
+						table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Tablet", ObjectId = id })
+					end
+				end
 			end
-			if currentRoom.ExorcismPointId ~= nil and IsUseable({ Id = currentRoom.ExorcismPointId }) then
-				table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Tablet", ObjectId = currentRoom
-				.ExorcismPointId })
+			if currentRoom.FishingPointChoices and #currentRoom.FishingPointChoices > 0 then
+				for i, id in pairs(currentRoom.FishingPointChoices) do
+					if IsUseable({Id = id}) then
+						table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Fish", ObjectId = id })
+					end
+				end
+			end
+			if currentRoom.HarvestPointChoicesIds and #currentRoom.HarvestPointChoicesIds > 0 then
+				local HarvestPointIDs = GetIds({Name = "ConsumableItems"})
+				for i, id in pairs(HarvestPointIDs) do
+					if IsUseable({Id = id}) then
+						table.insert(rewardsTable, { IsResourceHarvest = true, Name = "Herb", ObjectId = id })
+					end
+				end
 			end
 			if GetIdsByType({ Name = "FieldsRewardCage" }) then
 				for k, v in ipairs(GetIdsByType({ Name = "FieldsRewardCage" })) do
@@ -1391,7 +1404,9 @@ function OnAdvancedTooltipPress()
 			return
 		end
 	end
-
+	if  GetMapName():find("Flashback_") ~= -1 then
+		OpenFlashbackMenu()
+	end
 	local rewardsTable = {}
 	if CurrentRun.Hero.IsDead and not IsScreenOpen("InventoryScreen") and not IsScreenOpen("BlindAccesibilityInventoryMenu") then
 		rewardsTable = ProcessTable(ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
@@ -2287,6 +2302,10 @@ function wrap_UpdateTalentButtons(screen, skipUsableCheck)
 			end
 		end
 	end
+end
+
+function OpenFlashbackMenu()
+
 end
 
 function sjson_Chronos(data)

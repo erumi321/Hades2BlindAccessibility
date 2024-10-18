@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed issues corresponding to Early Access Patch 5 (Olympic Update)
+
 ## [0.3.1] - 2024-10-14
 
 ### Added
@@ -42,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Make menu buttons read text trhough TOLk more consistently
+- Make menu buttons read text through TOLk more consistently
 
 ## [0.1.4] - 2024-05-27
 
