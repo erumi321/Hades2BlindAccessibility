@@ -186,6 +186,18 @@ modutil.mod.Path.Context.Wrap("HighlightTalentButton", function( button )
 	end)
 end)
 
+modutil.mod.Path.Override("HecateHideAndSeekExit", function(source, args)
+	override_HecateHideAndSeekExit(source, args)
+end)
+
+modutil.mod.Path.Wrap("UseableOff", function(baseFunc, args)
+	return wrap_UseableOff(baseFunc, args)
+end)
+
+modutil.mod.Path.Override("ExorcismSequence", function(source, exorcismData, args, user )
+	return override_ExorcismSequence(source, exorcismData, args, user)
+end)
+
 local projectilePath = rom.path.combine(rom.paths.Content, 'Game/Projectiles/EnemyProjectiles.sjson')
 
 sjson.hook(projectilePath, function(data)

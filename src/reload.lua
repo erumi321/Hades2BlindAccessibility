@@ -519,15 +519,59 @@ local mapPointsOfInterest = {
 			{ Name = "ShrineMenu",                      ObjectId = 589694, DestinationOffsetY = 90 },
 			{ Name = "Hub",                             ObjectId = 588689, RequireUseable = false },
 		}
+	},
+	Flashback_DeathAreaBedroomHades = {
+		InFlashback = true,
+		Objects = {
+			{ Name = "BiomeHouse",                      ObjectId = 487893, RequireUseable = false }
+		}
+	},
+	Flashback_DeathArea = {
+		InFlashback = true,
+		Objects = {
+			{ Name = "CharNyx",                      ObjectId = 370010, RequireUseable = true, DestinationOffsetX = 100, DestinationOffsetY = 100 }
+		},
+		SetupFunction = function(t)
+			if not IsUseable({ Id = 370010 }) then
+				t = AddNPCs(t)
+			end
+
+			return t
+		end
+	},
+	Flashback_Hub_Main = {
+		InFlashback = true,
+		Objects = {
+			{ Name = "Speaker_Homer",                      ObjectId = 583651, RequireUseable = true, DestinationOffsetX = 100, DestinationOffsetY = 100 }
+		},
+		SetupFunction = function(t)
+			if not IsUseable({ Id = 583651 }) then
+				t = AddNPCs(t)
+			end
+			for k,v in pairs(t) do
+				DebugPrintTable(v)
+				if v.Name == "Hecate" then
+					v.DestinationOffsetY = 50
+					print(GetDistance({Id = v.ObjectId, DestinationId = 558435}))
+					if GetDistance({Id = v.ObjectId, DestinationId = 558435}) < 400 then
+						v.DestinationOffsetX = 50
+					else
+						v.DestinationOffsetX = -50
+					end
+				end
+			end
+			return t
+		end
 	}
 }
 
 function ProcessTable(objects, blockIds)
 	local t = InitializeObjectList(objects, blockIds)
 
-	local map = GetMapName()
+	local currMap = GetMapName()
 	for map_name, map_data in pairs(mapPointsOfInterest) do
-		if map_name == map or map_name == "*" then
+		if map_name == currMap or map_name == "*" then
+			DebugPrintTable(map_data.Objects)
 			for _, object in pairs(map_data.Objects) do
 				if object.RequireUseable == false or IsUseable({ Id = object.ObjectId }) then
 					local o = ShallowCopyTable(object)
@@ -535,7 +579,8 @@ function ProcessTable(objects, blockIds)
 					table.insert(t, o)
 				end
 			end
-			if map_data.AddNPCs and GameState and GameState.Flags and not GameState.Flags.InFlashback then
+			print(GameState.Flags.InFlashback)
+			if map_data.AddNPCs and not map_data.InFlashback then
 				t = AddNPCs(t)
 			end
 
@@ -1398,14 +1443,16 @@ function OnCodexPress()
 end
 
 function OnAdvancedTooltipPress()
+	if string.find(GetMapName(), "Flashback_") ~= nil and IsInputAllowed({}) then
+		rewardsTable = ProcessTable()--ModUtil.Table.Merge(LootObjects, MapState.RoomRequiredObjects))
+		OpenRewardMenu(rewardsTable)
+		return
+	end
 	if IsEmpty(ActiveScreens) then
 		if not IsEmpty(MapState.CombatUIHide) or not IsInputAllowed({}) then
 			-- If no screen is open, controlled entirely by input status
 			return
 		end
-	end
-	if  GetMapName():find("Flashback_") ~= -1 then
-		OpenFlashbackMenu()
 	end
 	local rewardsTable = {}
 	if CurrentRun.Hero.IsDead and not IsScreenOpen("InventoryScreen") and not IsScreenOpen("BlindAccesibilityInventoryMenu") then
@@ -2304,10 +2351,143 @@ function wrap_UpdateTalentButtons(screen, skipUsableCheck)
 	end
 end
 
-function OpenFlashbackMenu()
+function override_HecateHideAndSeekExit(source, args)
+	args = args or {}
 
+	SetAnimation({ Name = "HecateHubGreet", DestinationId = source.ObjectId })
+	PlaySound({ Name = "/SFX/Player Sounds/IrisDeathMagic" })
+	PlaySound({ Name = "/Leftovers/Menu Sounds/TextReveal2" })
+
+	Teleport({ Id = source.ObjectId, DestinationId = args.TeleportId })
+	SetAnimation({ Name = "Hecate_Hub_Hide_Start", DestinationId = source.ObjectId })
+	SetAlpha({ Id = source.ObjectId, Fraction = 1.0, Duration = 0 })
+	RefreshUseButton( source.ObjectId, source )
+	StopStatusAnimation( source )
+	UseableOn({Id = source.ObjectId})
+	-- thread( HecateHideAndSeekHint )
 end
 
+function wrap_UseableOff(baseFunc, args) 
+	if GetMapName({}) == "Flashback_Hub_Main" and args.Id == 0 then
+		return baseFunc()
+	end
+	return baseFunc(args)
+end
+
+function override_ExorcismSequence( source, exorcismData, args, user )
+	local totalCheckFails = 0
+	local consecutiveCheckFails = 0
+	local prevAnim = "Melinoe_Tablet_Idle"
+
+	if exorcismData.MoveSequence == nil then
+		return false
+	end
+
+	for i, move in ipairs( exorcismData.MoveSequence ) do
+		rom.tolk.silence()
+		DebugPrint({ Text = "Exorcism Move "..i.." (Left = "..tostring(move.Left)..", Right = "..tostring(move.Right)..")" })
+		local extraTime = config.ExorcismTime
+		if move.Left and move.Right then
+			if config.ExorcismTime <= 2.4 then
+				extraTime = 2.4
+			end
+		end
+		move.EndTime = _worldTime + extraTime
+		ExorcismNextMovePresentation( source, args, user, move )
+
+		if config.SpeakExoricsm then
+			local outputText = ""
+			if move.Left then
+				outputText = outputText .. GetDisplayName({Text = "ExorcismLeft"})
+			end
+			if move.Right then
+				outputText = outputText .. GetDisplayName({Text = "ExorcismRight"})
+			end
+
+			rom.tolk.output(outputText)
+		end
+		local succeedCheck = false
+		while _worldTime < move.EndTime do
+			wait( exorcismData.InputCheckInterval or 0.1 )
+
+			if user.ExorcismDamageTaken then
+				return false
+			end
+
+			local isLeftDown = IsControlDown({ Name = "ExorcismLeft" })
+			local isRightDown = IsControlDown({ Name = "ExorcismRight" })
+			local targetAnim = nil
+			if isLeftDown and isRightDown then
+				targetAnim = "Melinoe_Tablet_Both_Start"
+			elseif isLeftDown then
+				targetAnim = "Melinoe_Tablet_Left_Start"
+			elseif isRightDown then
+				targetAnim = "Melinoe_Tablet_Right_Start"
+			else
+				if prevAnim == "Melinoe_Tablet_Both_Start" then
+					targetAnim = "Melinoe_Tablet_Both_End"
+				elseif prevAnim == "Melinoe_Tablet_Left_Start" then
+					targetAnim = "Melinoe_Tablet_Left_End"					
+				elseif prevAnim == "Melinoe_Tablet_Right_Start" then
+					targetAnim = "Melinoe_Tablet_Right_End"
+				end
+			end
+
+			local nextAnim = nil
+			if targetAnim ~= nil and targetAnim ~= prevAnim then
+				nextAnim = targetAnim
+			end
+
+			if nextAnim ~= nil then
+				SetAnimation({ Name = nextAnim, DestinationId = user.ObjectId })
+				prevAnim = nextAnim
+			end
+
+			local isLeftCorrect = move.Left == isLeftDown
+			local isRightCorrect = move.Right == isRightDown
+
+
+
+			ExorcismInputCheckPresentation( source, args, user, move, isLeftCorrect, isRightCorrect, isLeftDown, isRightDown, consecutiveCheckFails, exorcismData )
+
+			if isLeftCorrect and isRightCorrect and succeedCheck == false then
+				consecutiveCheckFails = 0
+				succeedCheck = true
+				move.EndTime = _worldTime + 0.4
+			else
+				-- move.EndTime = move.EndTime + (exorcismData.InputCheckInterval or 0.1)
+				-- totalCheckFails = totalCheckFails + 1
+				-- consecutiveCheckFails = consecutiveCheckFails + 1
+				-- DebugPrint({ Text = "Exorcism consecutiveCheckFails = "..consecutiveCheckFails })
+				-- if totalCheckFails >= (exorcismData.TotalCheckFails or 99) or consecutiveCheckFails >= (exorcismData.ConsecutiveCheckFails or 14) then
+				-- 	return false
+				-- end
+			end
+		end
+		if succeedCheck == false then
+			return false
+		end
+		-- if exorcismData.RequireCorrectAtMoveSwitch and consecutiveCheckFails > 0 then
+		-- 	return false
+		-- end
+
+		local key = "MovePipId"..move.Index
+		SetAnimation({ Name = "ExorcismPip_Full", DestinationId = source[key] })
+		if move.Left and move.Right then
+			CreateAnimation({ Name = "ExorcismSuccessHandLeft", DestinationId = CurrentRun.Hero.ObjectId })
+			CreateAnimation({ Name = "ExorcismSuccessHandRight", DestinationId = CurrentRun.Hero.ObjectId })
+		elseif move.Left then
+			CreateAnimation({ Name = "ExorcismSuccessHandLeft", DestinationId = CurrentRun.Hero.ObjectId })
+		elseif move.Right then
+			CreateAnimation({ Name = "ExorcismSuccessHandRight", DestinationId = CurrentRun.Hero.ObjectId })
+		end
+		-- DebugPrint({ Text = "_AFTAR_ Exorcism Move "..i.." (Left = "..tostring(move.Left)..", Right = "..tostring(move.Right)..")" })
+		
+	end
+
+	DebugPrint({ Text = "totalCheckFails = "..totalCheckFails })
+	return true
+end
 function sjson_Chronos(data)
 	for k, v in ipairs(data.Projectiles) do
 		if v.Name == "ChronosCircle" or v.Name == "ChronosCircleInverted" then

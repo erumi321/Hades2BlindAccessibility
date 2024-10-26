@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Flashbacks now allow navigation in the same way that the crossroads does (B / D-Pad Left)
+- The exoricsm mini-game now optionally speaks and has an adjustable allowed time multiplier to it (see config)
+
 ## [0.3.2] - 2024-10-18
 
 ### Fixed
