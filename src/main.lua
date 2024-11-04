@@ -40,7 +40,6 @@ public.config = config -- so other mods can access our config
 
 local function on_ready()
 	-- what to do when we are ready, but not re-do on reload.
-	if config.enabled == false then return end
 	
 	import 'ready.lua'
 end

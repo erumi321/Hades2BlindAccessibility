@@ -149,11 +149,12 @@ function OpenAssesDoorShowerMenu(doors)
 end
 
 function GetMapName()
-	if CurrentRun.Hero.IsDead then
+	if CurrentRun.Hero.IsDead and CurrentHubRoom ~= nil then
 		return CurrentHubRoom.Name
-	else
+	elseif CurrentRun ~= nil and CurrentRun.CurrentRoom ~= nil then
 		return CurrentRun.CurrentRoom.Name
 	end
+	return nil
 end
 
 function CreateAssesDoorButtons(screen, doors)
@@ -2385,7 +2386,6 @@ function override_ExorcismSequence( source, exorcismData, args, user )
 
 	for i, move in ipairs( exorcismData.MoveSequence ) do
 		rom.tolk.silence()
-		DebugPrint({ Text = "Exorcism Move "..i.." (Left = "..tostring(move.Left)..", Right = "..tostring(move.Right)..")" })
 		local extraTime = config.ExorcismTime
 		if move.Left and move.Right then
 			if config.ExorcismTime <= 2.4 then
@@ -2394,7 +2394,6 @@ function override_ExorcismSequence( source, exorcismData, args, user )
 		end
 		move.EndTime = _worldTime + extraTime
 		ExorcismNextMovePresentation( source, args, user, move )
-
 		if config.SpeakExoricsm then
 			local outputText = ""
 			if move.Left then
@@ -2453,7 +2452,7 @@ function override_ExorcismSequence( source, exorcismData, args, user )
 			if isLeftCorrect and isRightCorrect and succeedCheck == false then
 				consecutiveCheckFails = 0
 				succeedCheck = true
-				move.EndTime = _worldTime + 0.4
+				move.EndTime = _worldTime + move.Duration or 0.4
 			else
 				-- move.EndTime = move.EndTime + (exorcismData.InputCheckInterval or 0.1)
 				-- totalCheckFails = totalCheckFails + 1

@@ -7,8 +7,6 @@
 -- 	so you will most likely want to have it reference
 --	values and functions later defined in `reload.lua`.
 
-if not config.enabled then return end
-
 --[[
 Mod: DoorMenu
 Author: hllf & JLove
