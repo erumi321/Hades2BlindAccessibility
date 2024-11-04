@@ -7,10 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2024-11-04
+
 ### Changed
+
 - Exorcism timing now uses default region duration after input instead of hardcoded value (0.4).
 
 ### Fixed
+
 - Death bug
 - Fresh install now works correctly (no longer checks for config.enabled)
 
@@ -97,7 +101,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Arcana Menu integration with TOLk screen reader
 - Final Boss instant kill move -> 50 damage
 
-[unreleased]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.4.0...HEAD
+[unreleased]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.4.1...HEAD
+[0.4.1]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.3.2...0.4.0
 [0.3.2]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.3.1...0.3.2
 [0.3.1]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.3.0...0.3.1
