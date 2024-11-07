@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2024-11-07
+
 ### Fixed
+
 - Inventory bug
 
 ## [0.4.1] - 2024-11-04
@@ -104,7 +107,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Arcana Menu integration with TOLk screen reader
 - Final Boss instant kill move -> 50 damage
 
-[unreleased]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.4.1...HEAD
+[unreleased]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.4.2...HEAD
+[0.4.2]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.4.1...0.4.2
 [0.4.1]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.3.2...0.4.0
 [0.3.2]: https://github.com/erumi321/Hades2BlindAccessibility/compare/0.3.1...0.3.2

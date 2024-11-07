@@ -5,7 +5,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "erumi321"
 name = "Blind_Accessibility"
-versionNumber = "0.4.1"
+versionNumber = "0.4.2"
 description = "Adds a lot of blind accessibility features into the game, and overhauls a lot of menus. Heavily recommended to have TOLk compatibility mod"
 websiteUrl = "https://github.com/erumi321/Hades2BlindAccessibility"
 containsNsfwContent = false
