@@ -12,6 +12,9 @@ function wrap_InventoryScreenDisplayCategory(screen, categoryIndex, args)
 	if category.Locked then
 		return
 	end
+	if category.OpenFunctionName ~= nil then
+		return
+	end
 	local slotName = category.Name
 
 	for i, resourceName in ipairs(category) do
@@ -20,7 +23,7 @@ function wrap_InventoryScreenDisplayCategory(screen, categoryIndex, args)
 		if not resourceData then
 			return
 		end
-		if (GameState.LifetimeResourcesGained[resourceName] or 0) > 0 or (resourceData.RevealGameStateRequirements ~= nil and IsGameStateEligible(CurrentRun, resourceData, resourceData.RevealGameStateRequirements)) then
+		if CanShowResourceInInventory( resourceData ) then
 			local textLines = nil
 			local wantsToBeGifted = false
 			local canBeGifted = false

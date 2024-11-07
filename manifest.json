@@ -2,7 +2,7 @@
   "namespace": "erumi321",
   "name": "Blind_Accessibility",
   "description": "Adds a lot of blind accessibility features into the game, and overhauls a lot of menus. Heavily recommended to have TOLk compatibility mod",
-  "version_number": "0.4.0",
+  "version_number": "0.4.2",
   "dependencies": [
     "Hell2Modding-Hell2Modding-1.0.47",
     "SGG_Modding-ENVY-1.1.0",
